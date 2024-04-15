@@ -1,4 +1,5 @@
-try 
+#LU commented by LU:
+#= try 
 	# run batch on cluster
 	println("Use cluster setup.")
 	include("out/input/$(ENV["JOB_ID"])--input.jl") # contains the input data
@@ -6,8 +7,9 @@ try
 catch 
 	# run single file
 	println("Use single run setup.")
-	include("input.jl") # contains the input data
-end
+	include("input.jl") # contains the input data<
+end =#
+include("input.jl") #LU: added
 
 include("algorithms/$(algo).jl") # contains all training functions
 include("src/memory_plotting_saving.jl") # contains all ploting and rendering functions

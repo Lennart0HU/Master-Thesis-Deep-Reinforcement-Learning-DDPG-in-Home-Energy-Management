@@ -50,14 +50,14 @@ abstract type AbstractEnvironment end
 
 Reset an environment.
 """
-function reset! end
+#LU: commented this out to avoid the WARNING: function reset! end
 
 """
     r, s′ = step!(env, s, a)
 
 Move the simulation forward, collecting a reward and getting the next state.
 """
-function step! end
+#LU: commented this out to avoid the WARNING: function step! end
 
 # note for developers: you should also implement Base.done(env) for episodic environments
 finished(env::AbstractEnvironment, s′) = false
@@ -77,7 +77,7 @@ function actions end
 
 Return the current state of the environment.
 """
-state(env::AbstractEnvironment) = env.state
+#LU: commented this out to avoid the WARNING: state(env::AbstractEnvironment) = env.state
 
 """
     r = reward(env)
@@ -121,22 +121,24 @@ then return the next action `a`.
 
 Note that a policy could do a 'sarsa-style' update simply by saving the last state and action `(s,a)`.
 """
-function action end
+#LU: commented this out to avoid the WARNING: function action end
 
 
 # ----------------------------------------------------------------
 # concrete implementations
 
 # include("episodes.jl")
-include("episodes/iterators.jl")
-include("states.jl")
-include("policies/policies.jl")
-include("solvers.jl")
+#include("episodes/iterators.jl") #LU commenting this out, for this file doesnt exist in the repo
+#include("states.jl") #LU commenting this out, for this file doesnt exist in the repo
+#include("policies/policies.jl") #LU commenting this out, for this file doesnt exist in the repo
+#include("solvers.jl") #LU commenting this out, for this file doesnt exist in the repo
 
-include("envs/cartpole.jl")
-include("envs/pendulum.jl")
-include("envs/mountain_car.jl")
-include("envs/multi-armed-bandit.jl")
+#include("envs/cartpole.jl") #LU commenting this out, for this file doesnt exist in the repo
+#include("envs/pendulum.jl") #LU commenting this out, for this file doesnt exist in the repo 
+#include("envs/mountain_car.jl") #LU commenting this out, for this file doesnt exist in the repo
+#include("envs/multi-armed-bandit.jl") #LU commenting this out, for this file doesnt exist in the repo
+#LU: now commenting out anything I don't want. Stil ltrying to get input to recognise the U8 submodule...
+#=
 include("envs/shems_A.jl")
 include("envs/shems_B.jl")
 include("envs/shems_C.jl")
@@ -174,18 +176,21 @@ include("envs/shems_U3.jl")
 include("envs/shems_U4.jl")
 include("envs/shems_U5.jl")
 include("envs/shems_U6.jl")
-include("envs/shems_U7.jl")
+include("envs/shems_U7.jl") =#
 include("envs/shems_U8.jl")
+#=
 include("envs/shems_U8_2.jl")
 include("envs/shems_U9.jl")
 include("envs/shems_U10.jl")
 include("envs/shems_U11.jl")
 include("envs/shems_V.jl")
-include("envs/shems_V1.jl")
+include("envs/shems_V1.jl") =#
 
+# @reexport using .MultiArmedBanditEnv #LU commenting this out, for this file doesnt exist in the repo
 
-@reexport using .MultiArmedBanditEnv
-
+#LU: adding this line, because the submodule Reinforce.ShemsEnv_U8 wasn'T loading correctly in the input.jl ln:41.
+#@reexport using ShemsEnv_U8
+export ShemsENV_U8
 # ----------------------------------------------------------------
 # a keyboard action space
 

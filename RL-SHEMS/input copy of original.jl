@@ -19,33 +19,29 @@ using CSV, DataFrames
 gr()
 
 #------------ local machine ----------
-Job_ID = 1204241 #1149869
-Task_ID = 1204241 #1149869-1 #ENV["SGE_TASK_ID"]
-seed_run = 10 # run inference over all seeds 
+# Job_ID=1149869
+# Task_ID = 1149869-1 #ENV["SGE_TASK_ID"]
+# seed_run = 10 # run inference over all seeds 
 #--------cluster jobs------------
-#Job_ID = ENV["JOB_ID"]
-#Task_ID = ENV["SGE_TASK_ID"]
-#seed_run = parse(Int, Task_ID)
+Job_ID = ENV["JOB_ID"]
+Task_ID = ENV["SGE_TASK_ID"]
+seed_run = parse(Int, Task_ID)
 #-------------------------------- INPUTS --------------------------------------------
-train = 1
+train = 0
 plot_result = 0
 plot_all = 0
 render = 0
-track = 1 #-0.7  # 0 - off, 1 - DRL, , rule-based percentage of start Soc e.g. 70% -> -0.7 (has to be negative)
+track = -0.7  # 0 - off, 1 - DRL, , rule-based percentage of start Soc e.g. 70% -> -0.7 (has to be negative)
 
 season = "all" # "all" "both" "summer" "winter"
 
 price= "fix" # "fix", "TOU"
 noise_type = "gn" # "ou", "pn", "gn", "en"
  
-#LU: adding this:
-include("Reinforce.jl- files to add (envs) and to change/envs/shems_U8.jl")
-using .ShemsEnv_U8: Shems
-
-#LU: using Reinforce.ShemsEnv_U8: Shems
+using Reinforce.ShemsEnv_U8: Shems
 case = "$(season)_$(algo)_$(price)_base-256_gn.1_Env-U8-no-layer-norm-winter"
 run = "test"
-NUM_EP = 300 #3_001 #50_000
+NUM_EP = 3_001 #50_000
 L1 = 300 #256
 L2 = 600 #256
 idx=NUM_EP
@@ -63,8 +59,8 @@ current_episode = 0
 
 #--------------------------------- Memory ------------------------------------
 BATCH_SIZE = 120 #100 # Yu: 120
-MEM_SIZE = 4_000 #24_000
-MIN_EXP_SIZE = 4_000 #24_000
+MEM_SIZE = 24_000
+MIN_EXP_SIZE = 24_000
 
 ########################################################################################
 memory = CircularBuffer{Any}(MEM_SIZE)
@@ -74,8 +70,7 @@ EP_LENGTH = Dict("train" => 24,
 					("summer", "eval") => 359, ("summer", "test") => 767,
 					("winter", "eval") => 359, ("winter", "test") => 719,
 					("both", "eval") => 719,   ("both", "test") => 1487,
-          ("all", "eval") => 100,   ("all", "test") => 200) # length of whole evaluation set (different)
-					#("all", "eval") => 1439,   ("all", "test") => 2999) # length of whole evaluation set (different)
+					("all", "eval") => 1439,   ("all", "test") => 2999) # length of whole evaluation set (different)
 
 env_dict = Dict("train" => Shems(EP_LENGTH["train"], "data/$(season)_train_$(price).csv"),
 				"eval" => Shems(EP_LENGTH[season, "eval"], "data/$(season)_eval_$(price).csv"),
