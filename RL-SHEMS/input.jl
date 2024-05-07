@@ -19,18 +19,24 @@ using CSV, DataFrames
 gr()
 
 #------------ local machine ----------
-Job_ID = 1204241 #1149869
-Task_ID = 1204241 #1149869-1 #ENV["SGE_TASK_ID"]
-seed_run = 10 # run inference over all seeds 
+#Job_ID = 0205241 #1149869
+#Task_ID = 0205241 #1149869-1 #ENV["SGE_TASK_ID"]
+#seed_run = 10 # run inference over all seeds 
 #--------cluster jobs------------
 #Job_ID = ENV["JOB_ID"]
-#Task_ID = ENV["SGE_TASK_ID"]
+#Task_ID = ENV["SGE_TASK_ID"] #LU: original for SGE cluster approach
 #seed_run = parse(Int, Task_ID)
+#--------bash scheduler jobs------------
+Job_ID = ENV["JOB_ID"]
+Task_ID = ENV["TASK_ID"] #LU: added for bash scheduler
+seed_run = parse(Int, Task_ID)
+
+
 #-------------------------------- INPUTS --------------------------------------------
 train = 1
-plot_result = 0
-plot_all = 0
-render = 0
+plot_result = 1 #0 1
+plot_all = 1 #0 1
+render = 0 #0 1
 track = 1 #-0.7  # 0 - off, 1 - DRL, , rule-based percentage of start Soc e.g. 70% -> -0.7 (has to be negative)
 
 season = "all" # "all" "both" "summer" "winter"
@@ -44,8 +50,8 @@ using .ShemsEnv_U8: Shems
 
 #LU: using Reinforce.ShemsEnv_U8: Shems
 case = "$(season)_$(algo)_$(price)_base-256_gn.1_Env-U8-no-layer-norm-winter"
-run = "test"
-NUM_EP = 300 #3_001 #50_000
+run = "train"
+NUM_EP = 3_001 #50_000
 L1 = 300 #256
 L2 = 600 #256
 idx=NUM_EP
@@ -74,8 +80,8 @@ EP_LENGTH = Dict("train" => 24,
 					("summer", "eval") => 359, ("summer", "test") => 767,
 					("winter", "eval") => 359, ("winter", "test") => 719,
 					("both", "eval") => 719,   ("both", "test") => 1487,
-          ("all", "eval") => 100,   ("all", "test") => 200) # length of whole evaluation set (different)
-					#("all", "eval") => 1439,   ("all", "test") => 2999) # length of whole evaluation set (different)
+          #("all", "eval") => 100,   ("all", "test") => 200) # length of whole evaluation set (different)
+					("all", "eval") => 1439,   ("all", "test") => 2999) # length of whole evaluation set (different)
 
 env_dict = Dict("train" => Shems(EP_LENGTH["train"], "data/$(season)_train_$(price).csv"),
 				"eval" => Shems(EP_LENGTH[season, "eval"], "data/$(season)_eval_$(price).csv"),
