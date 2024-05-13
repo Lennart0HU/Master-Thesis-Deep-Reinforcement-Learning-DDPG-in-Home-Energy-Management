@@ -7,6 +7,8 @@
 
 using CUDA
 CUDA.allowscalar(false)
+
+
 #----------------------------- Model Architecture -----------------------------
 γ = 0.99f0     	# discount rate for future rewards 
 

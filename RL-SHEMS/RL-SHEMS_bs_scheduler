@@ -1,8 +1,0 @@
-#!/bin/bash
-
-export JOB_ID=1
-
-for (( TASK_ID=1; TASK_ID<=40; TASK_ID++ ))
-do
-    cp input.jl out/input/$JOB_ID-$TASK_ID-input.jl
-    

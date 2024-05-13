@@ -33,7 +33,7 @@ seed_run = parse(Int, Task_ID)
 
 
 #-------------------------------- INPUTS --------------------------------------------
-train = 1
+train = 1 # 0 1
 plot_result = 1 #0 1
 plot_all = 1 #0 1
 render = 0 #0 1
@@ -49,8 +49,8 @@ include("Reinforce.jl- files to add (envs) and to change/envs/shems_U8.jl")
 using .ShemsEnv_U8: Shems
 
 #LU: using Reinforce.ShemsEnv_U8: Shems
-case = "$(season)_$(algo)_$(price)_base-256_gn.1_Env-U8-no-layer-norm-winter"
-run = "train"
+case = "$(season)_$(algo)_$(price)_base-256_gn.1_Env-U8-no-layer-norm"
+run = "eval" # "test", "eval"
 NUM_EP = 3_001 #50_000
 L1 = 300 #256
 L2 = 600 #256
@@ -69,8 +69,8 @@ current_episode = 0
 
 #--------------------------------- Memory ------------------------------------
 BATCH_SIZE = 120 #100 # Yu: 120
-MEM_SIZE = 4_000 #24_000
-MIN_EXP_SIZE = 4_000 #24_000
+MEM_SIZE = 24_000 #24_000
+MIN_EXP_SIZE = 24_000 #24_000
 
 ########################################################################################
 memory = CircularBuffer{Any}(MEM_SIZE)
@@ -88,10 +88,14 @@ env_dict = Dict("train" => Shems(EP_LENGTH["train"], "data/$(season)_train_$(pri
 				"test" => Shems(EP_LENGTH[season, "test"], "data/$(season)_test_$(price).csv"))
 
 WAIT = Dict(
-          ("summer", "DDPG") => 1500, ("summer", "TD3") => 1500, ("summer", "SAC") => 5000,
-          ("winter", "DDPG") => 2000, ("winter", "TD3") => 2000, ("winter", "SAC") => 7000,
-          ("both", "DDPG") => 3000,   ("both", "TD3") => 3000,  ("both", "SAC") => 10000,
-          ("all", "DDPG") => 4000,    ("all", "TD3") => 5000,   ("all", "SAC") => 20_000) 
+          ("summer", "DDPG") => 150, ("summer", "TD3") => 1500, ("summer", "SAC") => 5000,
+          ("winter", "DDPG") => 200, ("winter", "TD3") => 2000, ("winter", "SAC") => 7000,
+          ("both", "DDPG") => 300,   ("both", "TD3") => 3000,  ("both", "SAC") => 10000,
+          ("all", "DDPG") => 400,    ("all", "TD3") => 5000,   ("all", "SAC") => 20_000) 
+          #("summer", "DDPG") => 1500, ("summer", "TD3") => 1500, ("summer", "SAC") => 5000,  #LU: original code
+          #("winter", "DDPG") => 2000, ("winter", "TD3") => 2000, ("winter", "SAC") => 7000,
+          #("both", "DDPG") => 3000,   ("both", "TD3") => 3000,  ("both", "SAC") => 10000,
+          #("all", "DDPG") => 4000,    ("all", "TD3") => 5000,   ("all", "SAC") => 20_000) 
 
 
 

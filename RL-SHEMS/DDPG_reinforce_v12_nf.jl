@@ -13,24 +13,31 @@ end =#
 #include("input.jl") #LU: quote above and add this line to bypass scheduler
 
 #LU: Own scheduler code:
-
-
-
+#=
 try 
 	# run on bash scheduler
 	println("Use bash scheduler.")
 	include("input.jl") # contains the input data
-	gpu_id = parse(Int, ENV["GPU_ID"])	
-	device!(gpu_id)
 	println("Starting script with JOB_ID: $(ENV["JOB_ID"]), TASK_ID: $(ENV["TASK_ID"]) on GPU: $(gpu_id)!")
 catch
 	# run single file
 	println("Use single run setup.")
 	include("input.jl") # contains the input data
 end
+=#
+
+gpu_id = parse(Int, ENV["GPU_ID"])	
+
+include("input.jl")
+
+using CUDA
+CUDA.device!(gpu_id)
+printGPU = CUDA.device()
+println("Starting script with JOB_ID: $(ENV["JOB_ID"]), TASK_ID: $(ENV["TASK_ID"]) on GPU: $(printGPU)!")
 
 include("algorithms/$(algo).jl") # contains all training functions
 include("src/memory_plotting_saving.jl") # contains all ploting and rendering functions
+
 #-------
 populate_memory(env_dict["train"], rng=rng_run)
 # initialization for normalization
@@ -111,3 +118,5 @@ elseif track < 0 #rule-based
 	inference(env_dict[run]; render=false, track=track, idx=track)
 	write_to_tracker_file(idx=track, rng=track)
 end
+
+println("Script with JOB_ID: $(ENV["JOB_ID"]) & TASK_ID: $(ENV["TASK_ID"]) is done!")
