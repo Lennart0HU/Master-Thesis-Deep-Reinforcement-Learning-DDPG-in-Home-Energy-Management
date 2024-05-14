@@ -33,7 +33,7 @@ seed_run = parse(Int, Task_ID)
 
 
 #-------------------------------- INPUTS --------------------------------------------
-train = 1 # 0 1
+train = 0 # 0 1
 plot_result = 1 #0 1
 plot_all = 1 #0 1
 render = 0 #0 1
@@ -50,7 +50,7 @@ using .ShemsEnv_U8: Shems
 
 #LU: using Reinforce.ShemsEnv_U8: Shems
 case = "$(season)_$(algo)_$(price)_base-256_gn.1_Env-U8-no-layer-norm"
-run = "eval" # "test", "eval"
+run = "test" # "test", "eval"
 NUM_EP = 3_001 #50_000
 L1 = 300 #256
 L2 = 600 #256
@@ -91,7 +91,7 @@ WAIT = Dict(
           ("summer", "DDPG") => 150, ("summer", "TD3") => 1500, ("summer", "SAC") => 5000,
           ("winter", "DDPG") => 200, ("winter", "TD3") => 2000, ("winter", "SAC") => 7000,
           ("both", "DDPG") => 300,   ("both", "TD3") => 3000,  ("both", "SAC") => 10000,
-          ("all", "DDPG") => 400,    ("all", "TD3") => 5000,   ("all", "SAC") => 20_000) 
+          ("all", "DDPG") => 1000,    ("all", "TD3") => 5000,   ("all", "SAC") => 20_000) 
           #("summer", "DDPG") => 1500, ("summer", "TD3") => 1500, ("summer", "SAC") => 5000,  #LU: original code
           #("winter", "DDPG") => 2000, ("winter", "TD3") => 2000, ("winter", "SAC") => 7000,
           #("both", "DDPG") => 3000,   ("both", "TD3") => 3000,  ("both", "SAC") => 10000,
