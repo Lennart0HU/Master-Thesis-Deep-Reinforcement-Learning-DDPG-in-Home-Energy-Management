@@ -1,1 +1,9 @@
-out/
+/_archiv/*
+/bson/*
+!/bson/temp/
+/bson/temp/*
+/fig/*
+/tracker/*
+/data/charger_battery_data.csv
+ORIGINAL-RL-SHEMS/
+.conda/
