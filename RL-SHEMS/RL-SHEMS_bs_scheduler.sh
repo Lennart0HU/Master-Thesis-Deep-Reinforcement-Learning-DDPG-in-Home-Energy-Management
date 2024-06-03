@@ -1,10 +1,10 @@
 #!/bin/bash
 
-export JOB_ID=1405240 # date + single digit
+export JOB_ID=3105240 # date + single digit
 
 cp input.jl out/input/$JOB_ID--input.jl
 
-for (( TASK_ID=1; TASK_ID<=40; TASK_ID++ ))
+for (( TASK_ID=1; TASK_ID<=2; TASK_ID++ ))
 do
     GPU_ID=$((TASK_ID % 2))
 

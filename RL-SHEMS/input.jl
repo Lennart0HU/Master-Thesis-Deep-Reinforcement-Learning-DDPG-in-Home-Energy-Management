@@ -33,7 +33,7 @@ seed_run = parse(Int, Task_ID)
 
 
 #-------------------------------- INPUTS --------------------------------------------
-train = 0 # 0 1
+train = 1 # 0 1
 plot_result = 1 #0 1
 plot_all = 1 #0 1
 render = 0 #0 1

@@ -28,7 +28,7 @@ end
 
 gpu_id = parse(Int, ENV["GPU_ID"])	
 
-include("input.jl")
+include("3105240--input.jl") # include("input.jl")
 
 using CUDA
 CUDA.device!(gpu_id)
