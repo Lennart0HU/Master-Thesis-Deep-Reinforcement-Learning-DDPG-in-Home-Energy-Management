@@ -1,0 +1,10 @@
+RL-SHEMS/_archiv/*
+RL-SHEMS/out/bson/*
+!RL-SHEMS/out/bson/temp/
+RL-SHEMS/out/bson/temp/*
+RL-SHEMS/out/fig/*
+RL-SHEMS/out/tracker/*
+RL-SHEMS/data/charger_battery_data.csv
+ORIGINAL-RL-SHEMS/
+.conda/
+
