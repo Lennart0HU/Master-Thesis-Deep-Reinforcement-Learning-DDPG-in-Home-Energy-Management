@@ -60,7 +60,7 @@ score_mean = zeros(ceil(Int32, NUM_EP/test_every))
 if train == true
 	t_start = now()
 	print("Max steps: $(EP_LENGTH["train"]), Max episodes: $(NUM_EP), Layer 1: $(L1) nodes, Layer 2: $(L2) nodes, ")
-	println("Case: $(case), Time to start: $(round(t_start - start_time, Dates.Minute))")
+	println("Case: $(case), Run: $(rng_run), Time to start: $(round(t_start - start_time, Dates.Minute))")
 	run_episodes(env_dict["train"], env_dict["eval"], total_reward, score_mean, best_run, noise_mean,
 					test_every, render,  rng_run, track=0)
 	# ------------------------- Save results ---------------------------------------
@@ -127,4 +127,4 @@ elseif track < 0 #rule-based
 	write_to_tracker_file(idx=track, rng=track)
 end
 
-println("Script with JOB_ID: $(ENV["JOB_ID"]) & TASK_ID: $(ENV["TASK_ID"]) is done!")
+println("Script with JOB_ID: $(Task_ID) & TASK_ID: $(Job_ID) is done!")

@@ -110,7 +110,7 @@ function plot_scores(;ymin=Inf, total_reward=total_reward, score_mean=score_mean
 	yaxis!("Average score per time step [€] / noise", font(10, "serif"));
 	xaxis!("Training episodes", font(10, "serif"));
 
-	savefig("out/fig/$(Job_ID)-$(Task_ID)_DDPG_Shems_v12_$(run)_$(EP_LENGTH["train"])"*
+	savefig("out/fig/$(Job_ID)-$(Task_ID)_DDPG_Shems_Charger_v1_$(run)_$(EP_LENGTH["train"])"*
 				"_$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_$(ymin).png");
 end
 
@@ -159,7 +159,7 @@ function plot_all_scores(;ymin=Inf, score_mean=score_mean)
 	yaxis!("Average score per episode [€]", font(10, "serif"));
 	xaxis!("Training episodes", font(10, "serif"));
 
-	savefig("out/fig/$(Job_ID)_DDPG_Shems_v12_$(run)_$(EP_LENGTH["train"])_"*
+	savefig("out/fig/$(Job_ID)_DDPG_Shems_Charger_v1_$(run)_$(EP_LENGTH["train"])_"*
 				"$(NUM_EP)_$(L1)_$(L2)_$(case)_all_$(ymin).png");
 end
 
@@ -167,7 +167,7 @@ end
 function write_to_results_file(results; idx=NUM_EP, rng=seed_run, best=false)
     date=Date(now());
 	if best == true
-		CSV.write("out/tracker/$(Job_ID)_$(run)_results_v12_$(EP_LENGTH["train"])_"*
+		CSV.write("out/tracker/$(Job_ID)_$(run)_results_charger_v1_$(EP_LENGTH["train"])_"*
 		"$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_best.csv",
 			DataFrame(results, :auto), header=["Temp_FH", "Vol_HW", "Soc_B",
 			"T_FH_plus", "T_FH_minus", "V_HW_plus", "V_HW_minus",
@@ -176,7 +176,7 @@ function write_to_results_file(results; idx=NUM_EP, rng=seed_run, best=false)
 			"B", "HP", "B_tar", "FH_tar", "HW_tar"]);
 
 	elseif idx == NUM_EP
-    CSV.write("out/tracker/$(Job_ID)_$(run)_results_v12_$(EP_LENGTH["train"])_"*
+    CSV.write("out/tracker/$(Job_ID)_$(run)_results_charger_v1_$(EP_LENGTH["train"])_"*
 				"$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_$(idx).csv",
 					DataFrame(results, :auto), header=["Temp_FH", "Vol_HW", "Soc_B",
 					"T_FH_plus", "T_FH_minus", "V_HW_plus", "V_HW_minus",
@@ -198,10 +198,10 @@ function write_to_tracker_file(;idx=NUM_EP, rng=rng_run, best=false)
 	time=now();
 	date=Date(now());
 	if best == true
-		results = CSV.read("out/tracker/$(Job_ID)_$(run)_results_v12_$(EP_LENGTH["train"])_$(NUM_EP)_"*
+		results = CSV.read("out/tracker/$(Job_ID)_$(run)_results_charger_v1_$(EP_LENGTH["train"])_$(NUM_EP)_"*
 								"$(L1)_$(L2)_$(case)_$(rng)_best.csv", DataFrame)
 	elseif idx == NUM_EP
-		results = CSV.read("out/tracker/$(Job_ID)_$(run)_results_v12_$(EP_LENGTH["train"])_$(NUM_EP)_"*
+		results = CSV.read("out/tracker/$(Job_ID)_$(run)_results_charger_v1_$(EP_LENGTH["train"])_$(NUM_EP)_"*
 								"$(L1)_$(L2)_$(case)_$(rng)_$(idx).csv", DataFrame)
 	else
 		results = CSV.read("out/tracker/$(Job_ID)_$(run)_results_$(case)_rule_$(idx).csv", DataFrame)
@@ -245,18 +245,18 @@ function saveBSON(actor, total_reward, score_mean, best_run, noise_mean;
 					idx=NUM_EP, path="", rng=rng_run)
 	actor = cpu(actor)
 
-	BSON.@save "out/bson/$(path)/DDPG_Shems_v12_$(EP_LENGTH["train"])_$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_actor_$(idx).bson" actor
-	BSON.@save "out/bson/$(path)/DDPG_Shems_v12_$(EP_LENGTH["train"])_$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_scores_$(idx).bson" total_reward score_mean best_run noise_mean
+	BSON.@save "out/bson/$(path)/DDPG_Shems_Charger_v1_$(EP_LENGTH["train"])_$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_actor_$(idx).bson" actor
+	BSON.@save "out/bson/$(path)/DDPG_Shems_Charger_v1_$(EP_LENGTH["train"])_$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_scores_$(idx).bson" total_reward score_mean best_run noise_mean
 	return nothing
 end
 
 function loadBSON(;idx=NUM_EP, scores_only=false, path="", rng=seed_run)
 	if scores_only==true
-		BSON.@load "out/bson/$(path)/DDPG_Shems_v12_$(EP_LENGTH["train"])_$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_scores_$(idx).bson" total_reward score_mean best_run noise_mean
+		BSON.@load "out/bson/$(path)/DDPG_Shems_Charger_v1_$(EP_LENGTH["train"])_$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_scores_$(idx).bson" total_reward score_mean best_run noise_mean
 		return total_reward |> gpu, score_mean |> gpu, best_run |> gpu, noise_mean |> gpu
 	else
-		BSON.@load "out/bson/$(path)/DDPG_Shems_v12_$(EP_LENGTH["train"])_$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_actor_$(idx).bson" actor
-		BSON.@load "out/bson/$(path)/DDPG_Shems_v12_$(EP_LENGTH["train"])_$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_scores_$(idx).bson" total_reward score_mean best_run noise_mean
+		BSON.@load "out/bson/$(path)/DDPG_Shems_Charger_v1_$(EP_LENGTH["train"])_$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_actor_$(idx).bson" actor
+		BSON.@load "out/bson/$(path)/DDPG_Shems_Charger_v1_$(EP_LENGTH["train"])_$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_scores_$(idx).bson" total_reward score_mean best_run noise_mean
 		return actor |> gpu, total_reward |> gpu, score_mean |> gpu, best_run |> gpu, noise_mean |> gpu
 	end
 end

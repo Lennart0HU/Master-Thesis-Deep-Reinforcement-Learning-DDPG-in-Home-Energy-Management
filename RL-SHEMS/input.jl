@@ -19,17 +19,21 @@ using CSV, DataFrames
 gr()
 
 #------------ local machine ----------
-#Job_ID = 0205241 #1149869
-#Task_ID = 0205241 #1149869-1 #ENV["SGE_TASK_ID"]
-#seed_run = 10 # run inference over all seeds 
+Job_ID = 0406241 #1149869
+Task_ID = 1 #1149869-1 #ENV["SGE_TASK_ID"]
+seed_run = 1 # run inference over all seeds 
 #--------cluster jobs------------
 #Job_ID = ENV["JOB_ID"]
 #Task_ID = ENV["SGE_TASK_ID"] #LU: original for SGE cluster approach
 #seed_run = parse(Int, Task_ID)
 #--------bash scheduler jobs------------
+#=
 Job_ID = ENV["JOB_ID"]
 Task_ID = ENV["TASK_ID"] #LU: added for bash scheduler
 seed_run = parse(Int, Task_ID)
+=#
+
+Charger_ID = "Charger01"
 
 
 #-------------------------------- INPUTS --------------------------------------------
@@ -45,19 +49,21 @@ price= "fix" # "fix", "TOU"
 noise_type = "gn" # "ou", "pn", "gn", "en"
  
 #LU: adding this:
-include("Reinforce.jl- files to add (envs) and to change/envs/shems_U8.jl")
-using .ShemsEnv_U8: Shems
+#include("Reinforce.jl- files to add (envs) and to change/envs/shems_U8.jl")
+#using .ShemsEnv_U8: Shems
+include("Reinforce.jl- files to add (envs) and to change/envs/shems_LU1.jl")
+using .ShemsEnv_LU1: Shems
 
 #LU: using Reinforce.ShemsEnv_U8: Shems
-case = "$(season)_$(algo)_$(price)_base-256_gn.1_Env-U8-no-layer-norm"
-run = "test" # "test", "eval"
-NUM_EP = 3_001 #50_000
+case = "$(Charger_ID)_$(season)_$(algo)_$(price)_base-256_gn.1_Env-U8-no-layer-norm"
+run = "eval" # "test", "eval"
+NUM_EP = 3_01 #50_000
 L1 = 300 #256
 L2 = 600 #256
 idx=NUM_EP
 test_every = 100
 test_runs = 100
-num_seeds = 40
+num_seeds = 1 #40
 
 #-------------------------------------
 seed_ini = 123
@@ -69,8 +75,8 @@ current_episode = 0
 
 #--------------------------------- Memory ------------------------------------
 BATCH_SIZE = 120 #100 # Yu: 120
-MEM_SIZE = 24_000 #24_000
-MIN_EXP_SIZE = 24_000 #24_000
+MEM_SIZE = 24_00 #24_000
+MIN_EXP_SIZE = 24_00 #24_000
 
 ########################################################################################
 memory = CircularBuffer{Any}(MEM_SIZE)
@@ -83,15 +89,22 @@ EP_LENGTH = Dict("train" => 24,
           #("all", "eval") => 100,   ("all", "test") => 200) # length of whole evaluation set (different)
 					("all", "eval") => 1439,   ("all", "test") => 2999) # length of whole evaluation set (different)
 
-env_dict = Dict("train" => Shems(EP_LENGTH["train"], "data/$(season)_train_$(price).csv"),
-				"eval" => Shems(EP_LENGTH[season, "eval"], "data/$(season)_eval_$(price).csv"),
-				"test" => Shems(EP_LENGTH[season, "test"], "data/$(season)_test_$(price).csv"))
+
+CSV.read("data/$(Charger_ID)_$(season)_train_$(price).csv", DataFrame)
+
+env_dict = Dict("train" => Shems(EP_LENGTH["train"], "data/$(Charger_ID)_$(season)_train_$(price).csv"),
+				"eval" => Shems(EP_LENGTH[season, "eval"], "data/$(Charger_ID)_$(season)_eval_$(price).csv"),
+				"test" => Shems(EP_LENGTH[season, "test"], "data/$(Charger_ID)_$(season)_test_$(price).csv"))
+
+#env_dict = Dict("train" => Shems(EP_LENGTH["train"], "data/$(Charger_ID)_$(season)_train_$(price).csv"),
+#				"eval" => Shems(EP_LENGTH[season, "eval"], "data/$(Charger_ID)_$(season)_eval_$(price).csv"), #LU $(season)_eval_$(price).csv"),
+#				"test" => Shems(EP_LENGTH[season, "test"], "data/$(Charger_ID)_$(season)_test_$(price).csv"), #LU $(season)_test_$(price).csv"))
 
 WAIT = Dict(
           ("summer", "DDPG") => 150, ("summer", "TD3") => 1500, ("summer", "SAC") => 5000,
           ("winter", "DDPG") => 200, ("winter", "TD3") => 2000, ("winter", "SAC") => 7000,
           ("both", "DDPG") => 300,   ("both", "TD3") => 3000,  ("both", "SAC") => 10000,
-          ("all", "DDPG") => 1000,    ("all", "TD3") => 5000,   ("all", "SAC") => 20_000) 
+          ("all", "DDPG") => 50,    ("all", "TD3") => 5000,   ("all", "SAC") => 20_000) 
           #("summer", "DDPG") => 1500, ("summer", "TD3") => 1500, ("summer", "SAC") => 5000,  #LU: original code
           #("winter", "DDPG") => 2000, ("winter", "TD3") => 2000, ("winter", "SAC") => 7000,
           #("both", "DDPG") => 3000,   ("both", "TD3") => 3000,  ("both", "SAC") => 10000,

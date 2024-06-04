@@ -1,4 +1,4 @@
-module ShemsEnv_U8
+module ShemsEnv_LU1
 # Ported from: https://github.com/openai/gym/blob/996e5115621bf57b34b9b79941e629a36a709ea1/gym/envs/classic_control/pendulum.py
 #              https://github.com/openai/gym/wiki/Pendulum-v0
 # add DataFrames to dependencies
@@ -16,10 +16,6 @@ import Reinforce: reset!, action, finished, step!, state
 export
   Shems,  reset!,  step!,  action,  finished,  state,  track
 
-struct HeatPump
-    rate_max::Float32
-end
-
 struct PV
     eta::Float32
 end
@@ -32,12 +28,12 @@ struct Battery
     loss::Float32
 end
 
-struct ThermalStorage
-    volume::Float32
-    loss::Float32
-    t_supply::Float32
+struct ElectricVehicle
+    eta::Float32
     soc_min::Float32
     soc_max::Float32
+    rate_max::Float32
+    loss::Float32
 end
 
 struct Market
@@ -48,138 +44,77 @@ end
 
 # PV(eta)
 pv = PV(0.95f0);
-# HeatPump(rate_max)
-hp = HeatPump(3f0);
-# ThermalStorage(volume, loss, t_supply, soc_min, soc_max)
-fh = ThermalStorage(10f0, 0.045f0, 30f0, 19f0, 24f0); ##YU
-hw = ThermalStorage(200f0, 0.035f0, 45f0, 20f0, 180f0);
+
 # Battery(eta, soc_min, soc_max, rate_max, loss)
 b = Battery(0.98f0, 0f0, 10f0, 4.6f0, 0.00003f0);
+ev = ElectricVehicle(0.98f0, 0f0, 10f0, 4.6f0, 0.00003f0);
 # Market(price, comfort_weight)
 m = Market(0.3f0, 1f0, 1f0)
 
-const p_concr = 2400.0f0;   # kg/m^3
-const c_concr = 1f0;      # kJ/(kg*°C)
-const p_water = 997f0;    # kg/m^3
-const c_water = 4.184f0;    # kJ/(kg*°C)
-
 mutable struct ShemsState{T<:AbstractFloat} <: AbstractVector{T}
   Soc_b::T
-  #LU T_fh::T
-  #LU V_hw::T
+  Soc_ev::T
   d_e::T
-  #LU d_fh::T
-  #LU d_hw::T
+  d_ev::T
   g_e::T
-  #LU t_out::T
   p_buy::T
- # hour::T
   h_cos::T
   h_sin::T
-  # m_cos::T
-  # m_sin::T
-  # d_res::T
   season::T
 end
 
-ShemsState() = ShemsState(0f0, 0f0, 0f0, 0f0, 1f0, 0f0, 1f0) #LU
-#LU ShemsState(0f0, 22f0, 180f0, 0f0, 0f0, 0f0, 0f0, 0f0, 0f0, 1f0, 0f0, 1f0) #, 0f0, 0f0, 0f0)
+ShemsState() = ShemsState(0f0, 0f0, 0f0, 0f0, 0f0, 0f0, 1f0, 0f0, 1f0)
 
-Base.size(::ShemsState) = (7,) #LU(12,)
+Base.size(::ShemsState) = (9,)
 # Base.size(::ShemsState) = (10,)
 
-#LU
-#=function Base.getindex(s::ShemsState, i::Int)
-  (i > length(s)) && throw(BoundsError(s, i))
-  	ifelse(i == 1, s.Soc_b,
-  	ifelse(i == 2, s.T_fh,
-	ifelse(i == 3, s.V_hw,
-	ifelse(i == 4, s.d_e,
-	ifelse(i == 5, s.d_fh,
-	ifelse(i == 6, s.d_hw,
-	ifelse(i == 7, s.g_e,
-	ifelse(i == 8, s.t_out,
-    ifelse(i == 9, s.p_buy,
-	# ifelse(i == 10, s.hour,
-	# ifelse(i == 11, s.month,
-	ifelse(i == 10, s.h_cos,
-	ifelse(i == 11, s.h_sin,
-	# ifelse(i == 12, s.m_cos,
-	# ifelse(i == 13, s.m_sin,
-	# s.d_res))))))))))) #))
-	s.season))))))))))) #))
-end=#
-
-#LU:
 function Base.getindex(s::ShemsState, i::Int)
   (i > length(s)) && throw(BoundsError(s, i))
-      ifelse(i == 1, s.Soc_b,
-      ifelse(i == 2, s.d_e,
-      ifelse(i == 3, s.g_e,
-      ifelse(i == 4, s.p_buy,
-      ifelse(i == 5, s.h_cos,
-      ifelse(i == 6, s.h_sin,
-      s.season))))))#))))) #))
-  end
+  	ifelse(i == 1, s.Soc_b,
+  	ifelse(i == 2, s.Soc_ev,
+	ifelse(i == 3, s.d_e,
+    ifelse(i == 4, s.d_ev,
+	ifelse(i == 5, s.g_e,
+	ifelse(i == 6, s.p_buy,
+	ifelse(i == 7, s.h_cos,
+	ifelse(i == 8, s.h_sin,
+	s.season))))))))
+end
 
-#LU
-#=function Base.setindex!(s::ShemsState, x, i::Int)
-  (i > length(s)) && throw(BoundsError(s, i))
-  setproperty!(s, ifelse(i == 1, :Soc_b,
-	ifelse(i == 2, :T_fh,
-	ifelse(i == 3, :V_hw,
-	ifelse(i == 4, :d_e,
-	ifelse(i == 5, :d_fh,
-	ifelse(i == 6, :d_hw,
-	ifelse(i == 7, :g_e,
-	ifelse(i == 8, :t_out,
-	ifelse(i == 9, :p_buy,
-	# ifelse(i == 10, :hour,
-	# ifelse(i == 11, :month,
-	ifelse(i == 10, :h_cos,
-	ifelse(i == 11, :h_sin,
-	# ifelse(i == 12, :m_cos,
-	# ifelse(i == 13, :m_sin,
-	# :d_res))))))))))), x)
-	:season))))))))))), x)
-	end=#
-#LU:
 function Base.setindex!(s::ShemsState, x, i::Int)
   (i > length(s)) && throw(BoundsError(s, i))
-  setproperty!(s, ifelse(i == 1, s.Soc_b,
-    ifelse(i == 2, s.d_e,
-    ifelse(i == 3, s.g_e,
-    ifelse(i == 4, s.p_buy,
-    ifelse(i == 5, s.h_cos,
-    ifelse(i == 6, s.h_sin,
-	:season)))))), x)
+  setproperty!(s, ifelse(i == 1, :Soc_b,
+    ifelse(i == 2, s.Soc_ev,
+    ifelse(i == 3, s.d_e,
+    ifelse(i == 4, s.d_ev,
+    ifelse(i == 5, s.g_e,
+    ifelse(i == 6, s.p_buy,
+    ifelse(i == 7, s.h_cos,
+    ifelse(i == 8, s.h_sin,
+	:season)))))))), x)
 	end
-
 
 mutable struct ShemsAction{T<:AbstractFloat} <: AbstractVector{T}
   B::T
-  #LU FH::T
-  #LU HW::T
+  EV::T
 end
 
-ShemsAction() = ShemsAction(0.7f0) #LU , 0.7f0, 0.7f0)
+ShemsAction() = ShemsAction(0.7f0, 0.7f0)
 
-Base.size(::ShemsAction) = (1,) #LU (3,)
-Base.minimum(::ShemsAction) = (0f0) #LU (0f0, 0f0, 0f0)
-Base.maximum(::ShemsAction) = (1f0) #LU (1f0, 1f0, 1f0)
+Base.size(::ShemsAction) = (2,)
+Base.minimum(::ShemsAction) = (0f0, 0f0)
+Base.maximum(::ShemsAction) = (1f0, 1f0)
 
 function Base.getindex(a::ShemsAction, i::Int)
   (i > length(a)) && throw(BoundsError(a, i))
-  ifelse(i == 1, a.B) #LU ,
-  #LU ifelse(i == 2, a.FH,
-  #LU 	a.HW))
+  ifelse(i == 1, a.B,
+  	a.EV)
 end
 
 function Base.setindex!(a::ShemsAction, x, i::Int)
   (i > length(a)) && throw(BoundsError(a, i))
-  setproperty!(a, ifelse(i == 1, :B) #LU ,
-	#LU ifelse(i == 2, :FH,
-  	#LU :HW)), x)
+  setproperty!(a, ifelse(i == 1, :B,
+  	:EV), x)
 end
 
 mutable struct Shems{V<:AbstractVector, W<:AbstractVector} <: AbstractEnvironment
@@ -218,15 +153,6 @@ end
 
 Shems(maxsteps, path) = Shems(ShemsState(), 0.0, ShemsAction(), 0, maxsteps, 1, path)
 
-function COPcalc(ts::ThermalStorage, env::Shems)
-    # Calculate coefficients of performance for time period
-    return max(5.8 -(1/14 * abs(ts.t_supply - env.state.t_out)), 0);
-end
-
-function IsHot(env::Shems)
-    # Determine if outside temperture is hotter than inside temperture
-    return env.state.t_out > env.state.T_fh
-end
 
 function reset!(env::Shems; rng=0)
   idx = reset_state!(env, rng=rng)
@@ -243,29 +169,21 @@ function reset_state!(env::Shems; rng=0)
 	# random components
 	if rng == -1 #tracking/evalution/testing always the same
 		env.state.Soc_b = 0.5 * (b.soc_min + b.soc_max)
-		#LU env.state.T_fh = 0.5 * (fh.soc_min + fh.soc_max)
-		#LU env.state.V_hw = 0.5 * (hw.soc_min + hw.soc_max)
+		env.state.Soc_ev = 0.5 * (ev.soc_min + ev.soc_max)
 		idx = 1
     else #training/inference mean random
 		env.state.Soc_b = rand(MersenneTwister(rng), Uniform(b.soc_min, b.soc_max))
-		#LU env.state.T_fh = rand(MersenneTwister(rng), Uniform(fh.soc_min, fh.soc_max))
-		#LU env.state.V_hw = rand(MersenneTwister(rng), Uniform(hw.soc_min, hw.soc_max))
+		env.state.Soc_ev = rand(MersenneTwister(rng), Uniform(ev.soc_min, ev.soc_max))
 		idx = rand(MersenneTwister(rng), 1:(nrow(df) - env.maxsteps))
 	end
 
 	env.state.d_e = df[idx, :electkwh]
-	#LU env.state.d_fh = df[idx,:heatingkwh]
-    #LU env.state.d_hw = df[idx,:hotwaterkwh]
+	env.state.d_ev = df[idx,:heatingkwh] # change to EV data!! deal with NaNs
 	env.state.g_e = df[idx,:PV_generation]
-	#LU env.state.t_out = df[idx,:Temperature]
 	env.state.p_buy = df[idx,:p_buy]
-	# env.state.hour = df[idx,:hour]
 	env.state.season = df[idx,:season]
 	env.state.h_cos = df[idx,:hour_cos]
 	env.state.h_sin = df[idx,:hour_sin]
-	# env.state.m_cos = df[idx,:month_cos]
-	# env.state.m_sin = df[idx,:month_sin]
-	# env.state.d_res = df[idx,:d_res]
 	return idx
 end
 
@@ -274,74 +192,24 @@ function next_state!(env::Shems)
 	idx = env.idx + 1
 
 	env.state.d_e = df[idx, :electkwh]
-	#LU env.state.d_fh = df[idx,:heatingkwh]
-    #LU env.state.d_hw = df[idx,:hotwaterkwh]
+	env.state.d_ev = df[idx,:heatingkwh] # change to EV data!! deal with NaNs
 	env.state.g_e = df[idx,:PV_generation]
-	#LU env.state.t_out = df[idx,:Temperature]
 	env.state.p_buy = df[idx,:p_buy]
-	# env.state.hour = df[idx,:hour]
 	env.state.season = df[idx,:season]
 	env.state.h_cos = df[idx,:hour_cos]
 	env.state.h_sin = df[idx,:hour_sin]
-	# env.state.m_cos = df[idx,:month_cos]
-	# env.state.m_sin = df[idx,:month_sin]
-	# env.state.d_res = df[idx,:d_res]
 	return nothing
 end
 
 function action(env::Shems, a::ShemsAction)
-		#LU Soc_b, T_fh, V_hw, d_e, d_fh, d_hw, g_e, t_out, p_buy, h_cos, h_sin, season = env.state
-        Soc_b, d_e, g_e, p_buy, h_cos, h_sin, season = env.state #LU
-		B_target = a #LU, FH_target, HW_target = a
-		B = zeros(1) #LU, HP = zeros(2)
-		################### Heat pump ########################################
-		# HP percentage SOCs
-		#LU T_fh_perc = (T_fh - fh.soc_min) / (fh.soc_max - fh.soc_min)
-		#Lu V_hw_perc = (V_hw - hw.soc_min) / (hw.soc_max - hw.soc_min)
+		Soc_b, Soc_ev, d_e, d_ev, g_e, p_buy, h_cos, h_sin, season = env.state
+		B_target, EV_target = a
+		B, EV = zeros(2)
+
 		Soc_b_perc = (Soc_b - b.soc_min) / (b.soc_max - b.soc_min)
-
-		# charge HP when both under threshold, choose emptiest
-        #LU
-#=		if T_fh_perc < FH_target && V_hw_perc < HW_target # under threshold FH/HW %
-			if (T_fh_perc/FH_target) <= (V_hw_perc/HW_target) # charge FH
-				cop_fh = COPcalc(fh, env)
-				Hot = IsHot(env)
-				# Fill up to target state
-				FH_target_value = FH_target * (fh.soc_max - fh.soc_min) + fh.soc_min
-				HP = 1/cop_fh * ( (((p_concr * fh.volume * c_concr) * (FH_target_value - T_fh)) / (60 * 60))+
-						d_fh +( (1 - Hot) * fh.loss - Hot * fh.loss ) - 1f-4)
-				HP = min(hp.rate_max, HP)
-
-			elseif (V_hw_perc/HW_target) < (T_fh_perc/FH_target) # charge HW
-				cop_hw = COPcalc(hw, env)
-				# Fill up to target state
-				HW_target_value = HW_target * (hw.soc_max - hw.soc_min) + hw.soc_min
-				HP = -1/cop_hw * ( ((((p_water * hw.t_supply * c_water)  / 1000)* (HW_target_value - V_hw)) / (60 * 60)) +
-						d_hw + hw.loss - 1f-4)
-				HP = max(-hp.rate_max, HP)
-			end
-
-		# only FH under threshold
-		elseif T_fh_perc < FH_target && T_fh_perc < (0.95 * fh.soc_max)
-			cop_fh = COPcalc(fh, env)
-			Hot = IsHot(env)
-			# Fill up to target state
-			FH_target_value = FH_target * (fh.soc_max - fh.soc_min) + fh.soc_min
-			HP = 1/cop_fh * ( (((p_concr * fh.volume * c_concr) * (FH_target_value - T_fh)) / (60 * 60))+
-					d_fh +( (1 - Hot) * fh.loss - Hot * fh.loss ) - 1f-4)
-			HP = min(hp.rate_max, HP)
-
-		# only HW under threshold
-		elseif V_hw_perc < HW_target && V_hw_perc < (0.95 * hw.soc_max)
-			cop_hw = COPcalc(hw, env)
-			# Fill up to target state
-			HW_target_value = HW_target * (hw.soc_max - hw.soc_min) + hw.soc_min
-			HP = -1/cop_hw * ( ((((p_water * hw.t_supply * c_water)  / 1000)* (HW_target_value - V_hw)) / (60 * 60)) +
-					d_hw + hw.loss - 1f-4)
-			HP = max(-hp.rate_max, HP)
-		else
-			HP = 0
-		end=#
+        
+		############################# Battery ###############################
+        # charge EV when PV is available TBC!!
 
 		############################# Battery ###############################
 		# charge battery when PV is available (substracting electr. demand), heating demand might be added
@@ -359,39 +227,15 @@ function action(env::Shems, a::ShemsAction)
 			B = 0
 		end
 
-	return Float32.([B, HP])
+	return Float32.([B, EV])
 end
 
 function action(env::Shems, track=-1)
-	#LU Soc_b, T_fh, V_hw, d_e, d_fh, d_hw, g_e, t_out, p_buy, h_cos, h_sin, season = env.state
-    Soc_b, d_e, g_e, p_buy, h_cos, h_sin, season = env.state #LU
-	#Soc_b, T_fh, V_hw, d_e, d_fh, d_hw, g_e, t_out, p_buy, hour, season, d_res = env.state
-	
+	Soc_b, Soc_ev, d_e, d_ev, g_e, p_buy, h_cos, h_sin, season = env.state
+    
+    # TBC!!!
+    EV = 0
 
-	################### Heat pump ########################################
-	# HP percentage SOCs
-	#LU
-	#=T_fh_perc = (T_fh - fh.soc_min) / (fh.soc_max - fh.soc_min)
-	V_hw_perc = (V_hw - hw.soc_min) / (hw.soc_max - hw.soc_min)
-
-	# charge HP when under threshold, choose emptiest
-	if T_fh_perc < -track || V_hw_perc < -track # under threshold 70%
-		if T_fh_perc <= V_hw_perc # fully charge FH
-			cop_fh = COPcalc(fh, env)
-			Hot = IsHot(env)
-			# Fill to max
-			HP = 1/cop_fh * ( (((p_concr * fh.volume * c_concr) * (fh.soc_max - T_fh)) / (60 * 60))+
-					d_fh +( (1 - Hot) * fh.loss - Hot * fh.loss ) - 1f-4)
-			HP = min(hp.rate_max, HP)
-		elseif V_hw_perc < T_fh_perc # fully charge HW
-			cop_hw = COPcalc(hw, env)
-			HP = -1/cop_hw * ( ((((p_water * hw.t_supply * c_water)  / 1000)* (hw.soc_max - V_hw)) / (60 * 60)) +
-					d_hw + hw.loss - 1f-4)
-			HP = max(-hp.rate_max, HP)
-		end
-	else
-		HP = 0
-	end=#
 	############################# Battery ###############################
 	# charge battery when PV is available (substracting electr. demand)
 	pv_ = g_e - d_e
@@ -406,78 +250,45 @@ function action(env::Shems, track=-1)
 		B = 0
 	end
 
-return Float32.([B]) #LU , HP])
+return Float32.([B, EV])
 end
 
 
 function step!(env::Shems, s, a; track=0)
-	# Soc_b, T_fh, V_hw, d_e, d_fh, d_hw, g_e, t_out, p_buy, h_cos, h_sin, m_cos, m_sin, d_res = env.state
-	# Soc_b, T_fh, V_hw, d_e, d_fh, d_hw, g_e, t_out, p_buy, hour, month, d_res = env.state
-	# Soc_b, T_fh, V_hw, d_e, d_fh, d_hw, g_e, t_out, p_buy, hour, season = env.state
-	Soc_b, d_e, g_e, p_buy, h_cos, h_sin, season = env.state #LU
-	#LU Soc_b, T_fh, V_hw, d_e, d_fh, d_hw, g_e, t_out, p_buy, h_cos, h_sin, season = env.state
+	Soc_b, Soc_ev, d_e, d_ev, g_e, p_buy, h_cos, h_sin, season = env.state
 
 	if track >= 0
-		B_target = a #LU , FH_target, HW_target = a
-		B = action(env, ShemsAction(B_target)) #LU , HP = action(env, ShemsAction(B_target, FH_target, HW_target))
-		env.a = ShemsAction(B_target) #LU , FH_target, HW_target)
+		B_target, EV_target = a
+		B, EV = action(env, ShemsAction(B_target, EV_target))
+		env.a = ShemsAction(B_target, EV_target)
 	elseif track < 0
-		B_target = zeros(Float32,1) #LU , FH_target, HW_target = zeros(Float32,3)
-		B = a #LU , HP = a
-		env.a = ShemsAction(B_target) #LU , FH_target, HW_target)
+		B_target, FH_target = zeros(Float32,2)
+		B, EV = a
+		env.a = ShemsAction(B_target, EV_target)
 	end
 
-  	#LU pv_, BD, BC, T_fh_plus, T_fh_minus, V_hw_plus, V_hw_minus, cop_fh, cop_hw, abort, comfort = zeros(11)
-	pv_, BD, BC, abort, comfort = zeros(5) #LU
-
-	#LU PV_DE, PV_B, PV_HP, PV_GR, B_DE, B_HP, B_GR, GR_DE, GR_HP, GR_B, HP_FH, HP_HW = zeros(12)
-	PV_DE, PV_B, PV_GR, B_DE, B_GR, GR_DE, GR_B = zeros(7) #LU
-
+  	pv_, BD, BC, EVD, EVC, abort, comfort = zeros(7)
+	PV_DE, PV_B, PV_EV, PV_GR, B_DE, B_EV, B_GR, GR_DE, GR_EV, GR_B = zeros(10)
 
 	############# DETERMINE FLOWS ###################################
 	# fill only up to max level
+
+    # TBC: PV_EV, B_EV, GR_EV
+
 
 	if B < -0.01 # battery discharging, restrictions discharging rate and soc
 		BD = clamp(-B, 0.001, min(b.rate_max,  ((1 - b.loss - 1f-7) *Soc_b)) )
 	end
 
-	#LU
-	#=if HP > 0.01 # floor heating
-		cop_fh = COPcalc(fh, env)
-		Hot = IsHot(env)
-		HP_FH = clamp(HP, 0, min(hp.rate_max,
-											1/cop_fh * ( (((p_concr * fh.volume * c_concr) * (fh.soc_max - T_fh)) / (60 * 60)) +
-											d_fh +( (1 - Hot) * fh.loss - Hot * fh.loss ) - 1f-4)))
-	elseif HP < -0.01 # hot water
-		cop_hw = COPcalc(hw, env)
-		HP_HW = clamp(-HP, 0, min(hp.rate_max,
-											1/cop_hw * ( ((((p_water * hw.t_supply * c_water)  / 1000)* (hw.soc_max - V_hw)) / (60 * 60)) +
-											d_hw + hw.loss - 1f-4)))
-	end=#
+    if EV < -0.01 # battery discharging, restrictions discharging rate and soc
+		EVD = clamp(-EV, 0.001, min(ev.rate_max,  ((1 - ev.loss - 1f-7) *Soc_ev)) )
+	end
 
 	#---------------- PV generation greater than electricity demand -------------
 	if (g_e * pv.eta) > d_e
 		PV_DE = d_e
   		pv_ = (g_e * pv.eta) - PV_DE # PV left
-		# heat pump (only HP_FH or HP_HW can be >0)
-		#LU
-		#=
-		if  pv_ > (HP_FH + HP_HW)
-			PV_HP = (HP_FH + HP_HW)
-			pv_ -= PV_HP
-		elseif pv_ <= (HP_FH + HP_HW)
-			PV_HP = pv_
-			pv_ = 0
-			if BD > (HP_FH + HP_HW - PV_HP) / b.eta # heat pump from battery?
-				B_HP = (HP_FH + HP_HW - PV_HP)
-				BD -= B_HP / b.eta
-			elseif BD <= (HP_FH + HP_HW - PV_HP) / b.eta
-				B_HP = BD * b.eta
-				BD = 0
-				GR_HP = (HP_FH + HP_HW - PV_HP) - B_HP 		# slack variable heat pump
-			end
-		end=#
-
+		
 	# -------------- not enough PV for electr. demand --------------------------
 	elseif (g_e * pv.eta) <= d_e # electr. demand
 		PV_DE = g_e * pv.eta
@@ -486,20 +297,10 @@ function step!(env::Shems, s, a; track=0)
 		if BD > (d_e / b.eta) # from battery?
 			B_DE = d_e
 			BD -= B_DE / b.eta
-			#LU
-#=			if BD > ((HP_FH + HP_HW) / b.eta)
-				B_HP = (HP_FH + HP_HW)
-				BD -= B_HP / b.eta
-			elseif BD <= ((HP_FH + HP_HW) / b.eta)
-				B_HP = BD * b.eta
-				BD = 0
-				GR_HP = (HP_FH + HP_HW) - B_HP		# slack variable heat pump
-			end=#
 		elseif BD <= (d_e / b.eta)
 			B_DE = BD * b.eta
 			BD = 0
 			GR_DE = d_e - B_DE						# slack variable demand
-			#LU GR_HP = (HP_FH + HP_HW)					# slack variable heat pump
 		end
 	end
 
@@ -520,39 +321,11 @@ function step!(env::Shems, s, a; track=0)
 	B_GR = 0 # BD * b.eta #..................> no grid discharging
 
 	################### DETERMINE NEXT STATE ############################
-	# Floor heating
-	#LU
-#=	cop_fh = COPcalc(fh, env)
-	Hot = IsHot(env)
-	T_fh_new = T_fh + ( (60 * 60) / (p_concr * fh.volume * c_concr)) * ( (cop_fh * HP_FH) - d_fh )
-	# Calculate loss +/-
-	T_fh_new -= ( (60 * 60) / (p_concr * fh.volume * c_concr)) * ( (1 - Hot) * fh.loss - Hot * fh.loss )
-	# Comfort violations Floor heating
-	if T_fh_new > fh.soc_max
-		T_fh_plus = T_fh_new - fh.soc_max
-	elseif T_fh_new < fh.soc_min
-		T_fh_minus = fh.soc_min - T_fh_new
-	end
-
-	# Hot water
-	cop_hw = COPcalc(hw, env)
-	V_hw_new = V_hw + ((60 * 60) / ( (p_water * hw.t_supply * c_water)  / 1000 )) * ( (cop_hw * HP_HW) - d_hw )
-	# Calculate loss -
-	V_hw_new = V_hw_new - (60 * 60) / ( (p_water * hw.t_supply * c_water)  / 1000 ) * ( hw.loss )
-	# Comfort violations Hot water
-	if V_hw_new > hw.soc_max
-		V_hw_plus = V_hw_new - hw.soc_max
-	elseif V_hw_new < hw.soc_min
-		V_hw_minus = hw.soc_min - V_hw_new
-	end
 
 	################### Next states ############################
-	env.state.T_fh = T_fh_new
-	env.state.V_hw = V_hw_new=#
-	# Battery
-	#LU env.state.Soc_b = (1 - b.loss) * (Soc_b + PV_B + GR_B - ( (B_DE + B_HP + B_GR) / b.eta ) )
-	env.state.Soc_b = (1 - b.loss) * (Soc_b + PV_B + GR_B - ( (B_DE + B_GR) / b.eta ) ) #LU
 
+	# Battery
+	env.state.Soc_b = (1 - b.loss) * (Soc_b + PV_B + GR_B - ( (B_DE + B_GR) / b.eta ) )
 	# Set uncertain parts of next state
 	next_state!(env)
 	env.step += 1
@@ -560,22 +333,16 @@ function step!(env::Shems, s, a; track=0)
 
 	################### DETERMINE REWARD ############################
 
-	comfort = 0 #LU - V_hw_plus  - V_hw_minus - T_fh_plus - T_fh_minus   # comfort violations
+	comfort = 0 
 	b_degr = 0 #- 0.01 * (abs(B) > 0.01)   # abort penalty when discomfort abort
 	abort = - 0 * finished(env, env.state)  # abort penalty when discomfort abort
-	env.reward =  (m.sell_discount * p_buy * (PV_GR + B_GR)) - (p_buy * (GR_DE + GR_B)) -#LU + GR_HP + GR_B)) -
-	 					#LU m.comfort_weight_hw * (V_hw_plus + V_hw_minus) -
-						#LU m.comfort_weight_fh * (T_fh_plus + T_fh_minus) +
+	env.reward =  (m.sell_discount * p_buy * (PV_GR + B_GR)) - (p_buy * (GR_DE + GR_B)) -
 						b_degr +
 						abort
 
-	#LU
-	#=results = hcat(T_fh, V_hw, Soc_b, T_fh_plus, T_fh_minus, V_hw_plus, V_hw_minus,
-					env.reward, comfort, b_degr+abort, cop_fh, cop_hw, PV_DE, B_DE, GR_DE, PV_B, PV_GR,
-					PV_HP, GR_HP, GR_B, B_HP, B_GR, HP_FH, HP_HW, env.idx, B, HP, B_target, FH_target, HW_target)=#
-
-	results = hcat(Soc_b, env.reward, comfort, b_degr+abort, PV_DE, B_DE, GR_DE, PV_GR,
-					GR_B, B_GR, env.idx, B, B_target) #LU
+	results = hcat(Soc_b, Soc_ev, 
+					env.reward, comfort, b_degr+abort, PV_DE, B_DE, GR_DE, PV_B, PV_GR, PV_EV, B_EV, GR_EV,
+					GR_B, B_GR, env.idx, B, B_target, EV_target)
 
 	if track == 0
 		return env.reward, Vector{Float32}(env.state)
@@ -633,50 +400,7 @@ end
 	return [0 0; 2 2], [b.soc_min b.soc_max; b.soc_min b.soc_max]
   end
 
-  # floor heating state
-  #LU
-#=  @series begin
-	subplot := 2
-	seriestype := :bar
-	ylims := (0.8*fh.soc_min, fh.t_supply)
-	fillcolor := :firebrick
-    return [1], [env.state.T_fh]
-  end=
 
-  # floor heating comfort range
-  @series begin
-	  subplot := 2
-	  seriestype := :path
-	  ylims := (0.8*fh.soc_min, fh.t_supply)
-	  linecolor := :firebrick
-	  if env.a[2] > 0
-		  annotations := [(0.3, (fh.t_supply - 1),
-						  "FH: $(round(env.a[2], digits=3))", :top)]
-	  end
-	  return [0 0; 2 2], [fh.soc_min fh.soc_max; fh.soc_min fh.soc_max]
-  end
-
-  # hot water state
-  @series begin
-	subplot := 3
-	seriestype := :bar
-	ylims := (0, hw.volume)
-	fillcolor := :steelblue
-    return [1], [env.state.V_hw]
- end
-
- # hot water comfort range
- @series begin
-	 subplot := 3
-	 seriestype := :path
-	 ylims := (0, hw.volume)
-	 linecolor := :steelblue
-	 if env.a[2] < 0
-		 annotations := [(0.3, (hw.volume - 20),
-						 "HW: $(round(env.a[2], digits=3))", :top)]
-	 end
-	 return [0 0; 2 2], [hw.soc_min hw.soc_max; hw.soc_min hw.soc_max]
- end=#
 
 end
 
