@@ -57,12 +57,12 @@ using .ShemsEnv_LU1: Shems
 #LU: using Reinforce.ShemsEnv_U8: Shems
 case = "$(Charger_ID)_$(season)_$(algo)_$(price)_base-256_gn.1_Env-U8-no-layer-norm"
 run = "eval" # "test", "eval"
-NUM_EP = 3_01 #50_000
+NUM_EP = 101 #50_000
 L1 = 300 #256
 L2 = 600 #256
 idx=NUM_EP
-test_every = 100
-test_runs = 100
+test_every = 50
+test_runs = 50
 num_seeds = 1 #40
 
 #-------------------------------------

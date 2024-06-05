@@ -85,7 +85,7 @@ if plot_result == true
 			$(mean(total_reward[end-round(Int, length(total_reward)/20):end]))")
 	println("eval (last $(round(Int, size(score_mean)[1]/10)+1))=
 			$(mean(score_mean[end-round(Int, size(score_mean)[1]/10):end,1]))")
-	plot_scores(ymin = -2, rng=rng_run)
+	plot_scores(ymin = -4, rng=rng_run)
 end
 
 if plot_all == true

@@ -53,7 +53,8 @@ m = Market(0.3f0, 1f0, 1f0)
 
 mutable struct ShemsState{T<:AbstractFloat} <: AbstractVector{T}
   Soc_b::T
-  Soc_ev::T
+  Soc_ev::T  # Endogenous, whenever count-down starts or 1 when it's is off. Exogenous at all other times. When soc < 100% at departure: comfort violation
+  c_ev::T  # count-down till ev departure. Endogenous. 0 or -1 when EV absent.
   d_e::T
   d_ev::T
   g_e::T
@@ -63,34 +64,36 @@ mutable struct ShemsState{T<:AbstractFloat} <: AbstractVector{T}
   season::T
 end
 
-ShemsState() = ShemsState(0f0, 0f0, 0f0, 0f0, 0f0, 0f0, 1f0, 0f0, 1f0)
+ShemsState() = ShemsState(0f0, 0f0, 0f0, 0f0, 0f0, 0f0, 0f0, 1f0, 0f0, 1f0)
 
-Base.size(::ShemsState) = (9,)
-# Base.size(::ShemsState) = (10,)
+Base.size(::ShemsState) = (10,)
 
 function Base.getindex(s::ShemsState, i::Int)
   (i > length(s)) && throw(BoundsError(s, i))
   	ifelse(i == 1, s.Soc_b,
   	ifelse(i == 2, s.Soc_ev,
-	ifelse(i == 3, s.d_e,
-    ifelse(i == 4, s.d_ev,
-	ifelse(i == 5, s.g_e,
-	ifelse(i == 6, s.p_buy,
-	ifelse(i == 7, s.h_cos,
-	ifelse(i == 8, s.h_sin,
-	s.season))))))))
+	ifelse(i == 3, s.c_ev,
+	ifelse(i == 4, s.d_e,
+    ifelse(i == 5, s.d_ev,
+	ifelse(i == 6, s.g_e,
+	ifelse(i == 7, s.p_buy,
+	ifelse(i == 8, s.h_cos,
+	ifelse(i == 9, s.h_sin,
+	s.season)))))))))
 end
 
 function Base.setindex!(s::ShemsState, x, i::Int)
   (i > length(s)) && throw(BoundsError(s, i))
   setproperty!(s, ifelse(i == 1, :Soc_b,
-    ifelse(i == 2, s.Soc_ev,
-    ifelse(i == 3, s.d_e,
-    ifelse(i == 4, s.d_ev,
-    ifelse(i == 5, s.g_e,
-    ifelse(i == 6, s.p_buy,
-    ifelse(i == 7, s.h_cos,
-    ifelse(i == 8, s.h_sin,
+  	ifelse(i == 1, s.Soc_b,
+  	ifelse(i == 2, s.Soc_ev,
+	ifelse(i == 3, s.c_ev,
+	ifelse(i == 4, s.d_e,
+    ifelse(i == 5, s.d_ev,
+	ifelse(i == 6, s.g_e,
+	ifelse(i == 7, s.p_buy,
+	ifelse(i == 8, s.h_cos,
+	ifelse(i == 9, s.h_sin,
 	:season)))))))), x)
 	end
 
@@ -169,13 +172,16 @@ function reset_state!(env::Shems; rng=0)
 	# random components
 	if rng == -1 #tracking/evalution/testing always the same
 		env.state.Soc_b = 0.5 * (b.soc_min + b.soc_max)
-		env.state.Soc_ev = 0.5 * (ev.soc_min + ev.soc_max)
+		env.state.Soc_ev = 1
 		idx = 1
     else #training/inference mean random
 		env.state.Soc_b = rand(MersenneTwister(rng), Uniform(b.soc_min, b.soc_max))
-		env.state.Soc_ev = rand(MersenneTwister(rng), Uniform(ev.soc_min, ev.soc_max))
+		env.state.Soc_ev = 1
 		idx = rand(MersenneTwister(rng), 1:(nrow(df) - env.maxsteps))
+		
 	end
+
+	if df[idx, :]    # TBC
 
 	env.state.d_e = df[idx, :electkwh]
 	env.state.d_ev = df[idx,:heatingkwh] # change to EV data!! deal with NaNs

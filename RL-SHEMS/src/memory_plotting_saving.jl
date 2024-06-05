@@ -169,27 +169,21 @@ function write_to_results_file(results; idx=NUM_EP, rng=seed_run, best=false)
 	if best == true
 		CSV.write("out/tracker/$(Job_ID)_$(run)_results_charger_v1_$(EP_LENGTH["train"])_"*
 		"$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_best.csv",
-			DataFrame(results, :auto), header=["Temp_FH", "Vol_HW", "Soc_B",
-			"T_FH_plus", "T_FH_minus", "V_HW_plus", "V_HW_minus",
-			"rewards", "comfort", "rewART", "COP_FH","COP_HW","PV_DE", "B_DE", "GR_DE", "PV_B", "PV_GR",
-			"PV_HP","GR_HP", "GR_B", "B_HP","B_GR", "HP_FH", "HP_HW","index", 
-			"B", "HP", "B_tar", "FH_tar", "HW_tar"]);
+			DataFrame(results, :auto), header=["Soc_b", "Soc_ev", "rewards",
+			"comfort", "rewART", "PV_DE", "B_DE", "GR_DE", "PV_B", "PV_GR", 
+			"PV_EV", "B_EV", "GR_EV", "GR_B", "B_GR", "index", "B", "B_tar", "EV_tar"]);
 
 	elseif idx == NUM_EP
     CSV.write("out/tracker/$(Job_ID)_$(run)_results_charger_v1_$(EP_LENGTH["train"])_"*
 				"$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_$(idx).csv",
-					DataFrame(results, :auto), header=["Temp_FH", "Vol_HW", "Soc_B",
-					"T_FH_plus", "T_FH_minus", "V_HW_plus", "V_HW_minus",
-					"rewards", "comfort", "rewART", "COP_FH","COP_HW","PV_DE", "B_DE", "GR_DE", "PV_B", "PV_GR",
-					"PV_HP","GR_HP", "GR_B", "B_HP", "B_GR", "HP_FH", "HP_HW","index", 
-					"B", "HP", "B_tar", "FH_tar", "HW_tar"]);
+					DataFrame(results, :auto), header=["Soc_b", "Soc_ev", "rewards",
+					"comfort", "rewART", "PV_DE", "B_DE", "GR_DE", "PV_B", "PV_GR", 
+					"PV_EV", "B_EV", "GR_EV", "GR_B", "B_GR", "index", "B", "B_tar", "EV_tar"]);
 	elseif idx < 0
 	CSV.write("out/tracker/$(Job_ID)_$(run)_results_$(case)_rule_$(idx).csv",
-				DataFrame(results, :auto), header=["Temp_FH", "Vol_HW", "Soc_B",
-				"T_FH_plus", "T_FH_minus", "V_HW_plus", "V_HW_minus",
-				"rewards", "comfort", "rewART", "COP_FH","COP_HW","PV_DE", "B_DE", "GR_DE", "PV_B", "PV_GR",
-				"PV_HP","GR_HP", "GR_B", "B_HP","B_GR", "HP_FH", "HP_HW","index", 
-				"B", "HP", "B_tar", "FH_tar", "HW_tar"]);
+				DataFrame(results, :auto), header=["Soc_b", "Soc_ev", "rewards",
+				"comfort", "rewART", "PV_DE", "B_DE", "GR_DE", "PV_B", "PV_GR", 
+				"PV_EV", "B_EV", "GR_EV", "GR_B", "B_GR", "index", "B", "B_tar", "EV_tar"]);
 	end
     return nothing
 end
@@ -207,15 +201,12 @@ function write_to_tracker_file(;idx=NUM_EP, rng=rng_run, best=false)
 		results = CSV.read("out/tracker/$(Job_ID)_$(run)_results_$(case)_rule_$(idx).csv", DataFrame)
 	end
 	# Overall tracker (rewards without comfort costs)
-	Tracker = CSV.read("out/Tracker.csv", DataFrame, header=true);
+	Tracker = CSV.read("out/Tracker_Charger.csv", DataFrame, header=true);
 	Tracker = vcat(Matrix(Tracker), [time NUM_EP L1  L2  BATCH_SIZE  MEM_SIZE  MIN_EXP_SIZE season  run Job_ID rng case  best idx [
-								sum(results[!, :T_FH_plus])]  sum(results[!, :T_FH_minus]) [
-								sum(results[!, :V_HW_plus])]  sum(results[!, :V_HW_minus]) [
 								sum(results[!, :rewards] .-results[!, :comfort] .-results[!, :rewART])] sum(results[!, :comfort]) sum(results[!, :rewART]) ]);
 
-    CSV.write("out/Tracker.csv", DataFrame(Tracker,:auto), header=["time", "NUM_EP", "L1", "L2", "BATCH_SIZE", "MEM_SIZE",
-								"MIN_EXP_SIZE","season", "run", "Job_ID", "seed", "case", "best", "idx", "T_FH_plus", "T_FH_minus", "V_HW_plus",
-								"V_HW_minus", "rewards", "comfort", "rewART"]);
+    CSV.write("out/Tracker_Charger.csv", DataFrame(Tracker,:auto), header=["time", "NUM_EP", "L1", "L2", "BATCH_SIZE", "MEM_SIZE",
+								"MIN_EXP_SIZE","season", "run", "Job_ID", "seed", "case", "best", "idx", "rewards", "comfort", "rewART"]);
 
 	# # Cost tracker
 	# Costs = Matrix(CSV.read("out/Costs_$(run).csv", DataFrame, header=true))
