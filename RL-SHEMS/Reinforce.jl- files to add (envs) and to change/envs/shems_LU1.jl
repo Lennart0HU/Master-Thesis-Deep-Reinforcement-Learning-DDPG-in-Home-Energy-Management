@@ -181,7 +181,8 @@ function reset_state!(env::Shems; rng=0)
 		
 	end
 
-	if df[idx, :]    # TBC
+	if df[idx, :charge_kwh] > 0:
+		    # TBC
 
 	env.state.d_e = df[idx, :electkwh]
 	env.state.d_ev = df[idx,:heatingkwh] # change to EV data!! deal with NaNs
