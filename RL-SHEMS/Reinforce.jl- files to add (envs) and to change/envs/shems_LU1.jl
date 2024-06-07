@@ -47,16 +47,15 @@ pv = PV(0.95f0);
 
 # Battery(eta, soc_min, soc_max, rate_max, loss)
 b = Battery(0.98f0, 0f0, 10f0, 4.6f0, 0.00003f0);
-ev = ElectricVehicle(0.98f0, 0f0, 10f0, 4.6f0, 0.00003f0);
+ev = ElectricVehicle(0.98f0, 0f0, ev_cap, 11f0, 0.00003f0);   #TBC: DEFINE ev_cap!! delete whats not needed. Only rate_max needed?
 # Market(price, comfort_weight)
 m = Market(0.3f0, 1f0, 1f0)
 
 mutable struct ShemsState{T<:AbstractFloat} <: AbstractVector{T}
   Soc_b::T
   Soc_ev::T  # Endogenous, whenever count-down starts or 1 when it's is off. Exogenous at all other times. When soc < 100% at departure: comfort violation
-  c_ev::T  # count-down till ev departure. Endogenous. 0 or -1 when EV absent.
+  c_ev::T  # count-down till ev departure. Endogenous. 0 (or -1?) when EV absent.
   d_e::T
-  d_ev::T
   g_e::T
   p_buy::T
   h_cos::T
@@ -64,9 +63,11 @@ mutable struct ShemsState{T<:AbstractFloat} <: AbstractVector{T}
   season::T
 end
 
-ShemsState() = ShemsState(0f0, 0f0, 0f0, 0f0, 0f0, 0f0, 0f0, 1f0, 0f0, 1f0)
+# Soc_b is in kWh, but Soc_ev in %. Is that too confusing?
 
-Base.size(::ShemsState) = (10,)
+ShemsState() = ShemsState(0f0, 0f0, -1f0, 0f0, 0f0, 0f0, 1f0, 0f0, 1f0)
+
+Base.size(::ShemsState) = (9,)
 
 function Base.getindex(s::ShemsState, i::Int)
   (i > length(s)) && throw(BoundsError(s, i))
@@ -74,12 +75,11 @@ function Base.getindex(s::ShemsState, i::Int)
   	ifelse(i == 2, s.Soc_ev,
 	ifelse(i == 3, s.c_ev,
 	ifelse(i == 4, s.d_e,
-    ifelse(i == 5, s.d_ev,
-	ifelse(i == 6, s.g_e,
-	ifelse(i == 7, s.p_buy,
-	ifelse(i == 8, s.h_cos,
-	ifelse(i == 9, s.h_sin,
-	s.season)))))))))
+	ifelse(i == 5, s.g_e,
+	ifelse(i == 6, s.p_buy,
+	ifelse(i == 7, s.h_cos,
+	ifelse(i == 8, s.h_sin,
+	s.season))))))))
 end
 
 function Base.setindex!(s::ShemsState, x, i::Int)
@@ -89,12 +89,11 @@ function Base.setindex!(s::ShemsState, x, i::Int)
   	ifelse(i == 2, s.Soc_ev,
 	ifelse(i == 3, s.c_ev,
 	ifelse(i == 4, s.d_e,
-    ifelse(i == 5, s.d_ev,
-	ifelse(i == 6, s.g_e,
-	ifelse(i == 7, s.p_buy,
-	ifelse(i == 8, s.h_cos,
-	ifelse(i == 9, s.h_sin,
-	:season)))))))), x)
+	ifelse(i == 5, s.g_e,
+	ifelse(i == 6, s.p_buy,
+	ifelse(i == 7, s.h_cos,
+	ifelse(i == 8, s.h_sin,
+	:season))))))))), x)
 	end
 
 mutable struct ShemsAction{T<:AbstractFloat} <: AbstractVector{T}
@@ -169,23 +168,22 @@ end
 
 function reset_state!(env::Shems; rng=0)
 	df = CSV.read(env.path, DataFrame)
+
 	# random components
-	if rng == -1 #tracking/evalution/testing always the same
+	if rng == -1 #tracking/evaluation/testing always the same
 		env.state.Soc_b = 0.5 * (b.soc_min + b.soc_max)
-		env.state.Soc_ev = 1
 		idx = 1
     else #training/inference mean random
 		env.state.Soc_b = rand(MersenneTwister(rng), Uniform(b.soc_min, b.soc_max))
-		env.state.Soc_ev = 1
 		idx = rand(MersenneTwister(rng), 1:(nrow(df) - env.maxsteps))
-		
 	end
 
-	if df[idx, :charge_kwh] > 0:
-		    # TBC
+	
+	env.state.Soc_ev = df[idx, :soc_ev]
 
+	# endogenous states
+	env.state.c_ev = df[idx, :h_countdown]
 	env.state.d_e = df[idx, :electkwh]
-	env.state.d_ev = df[idx,:heatingkwh] # change to EV data!! deal with NaNs
 	env.state.g_e = df[idx,:PV_generation]
 	env.state.p_buy = df[idx,:p_buy]
 	env.state.season = df[idx,:season]
@@ -194,12 +192,17 @@ function reset_state!(env::Shems; rng=0)
 	return idx
 end
 
-function next_state!(env::Shems)
+function next_state!(env::Shems)	# determining endogenous states for the next step # TBC: somehow the Soc_ev needs to be endogenously loaded when ev arrives.
 	df = CSV.read(env.path, DataFrame)
 	idx = env.idx + 1
 
+	env.state.c_ev = df[idx, :h_countdown]
+
+	if env.state.c_ev >= 0 && df[env.idx, :h_countdown] == -1 # if EV is NEWLY connected
+		env.state.soc_ev = df[idx, :soc_ev] # load soc of newly arrived EV from the data
+	end # else soc_ev was already connected at the previous step and the soc remains unchanged until an action is taken
+	
 	env.state.d_e = df[idx, :electkwh]
-	env.state.d_ev = df[idx,:heatingkwh] # change to EV data!! deal with NaNs
 	env.state.g_e = df[idx,:PV_generation]
 	env.state.p_buy = df[idx,:p_buy]
 	env.state.season = df[idx,:season]
@@ -209,18 +212,24 @@ function next_state!(env::Shems)
 end
 
 function action(env::Shems, a::ShemsAction)
-		Soc_b, Soc_ev, d_e, d_ev, g_e, p_buy, h_cos, h_sin, season = env.state
+		Soc_b, Soc_ev, c_ev, d_e, g_e, p_buy, h_cos, h_sin, season = env.state
 		B_target, EV_target = a
 		B, EV = zeros(2)
 
 		Soc_b_perc = (Soc_b - b.soc_min) / (b.soc_max - b.soc_min)
         
-		############################# Battery ###############################
-        # charge EV when PV is available TBC!!
+		############################# Electric Vehicle ###############################
+		# charge EV to max if SOC_ev less than EV_target%
+		if Soc_ev < EV_target
+			# Fill EV up to target, or iwth max charge rate
+			EV = min(ev.rate_max, (EV_target - Soc_ev) * (ev.soc_max - ev.soc_min))
+		else
+			EV = 0
+		end
 
 		############################# Battery ###############################
-		# charge battery when PV is available (substracting electr. demand), heating demand might be added
-		pv_ = g_e - d_e
+		# charge battery when surplus PV is available
+		pv_ = g_e - d_e - EV  # or no -EV? in original code theres no -HP
 
 		# charge to max if SOC less than B%
 		if pv_ > 0 && Soc_b_perc < B_target
@@ -238,14 +247,15 @@ function action(env::Shems, a::ShemsAction)
 end
 
 function action(env::Shems, track=-1)
-	Soc_b, Soc_ev, d_e, d_ev, g_e, p_buy, h_cos, h_sin, season = env.state
+	Soc_b, Soc_ev, c_ev, d_e, g_e, p_buy, h_cos, h_sin, season = env.state
     
-    # TBC!!!
-    EV = 0
+	############################# Electric Vehicle ###############################
+    # No smart charging here  (...?)
+    EV = min(ev.rate_max, (1 - Soc_ev))
 
 	############################# Battery ###############################
 	# charge battery when PV is available (substracting electr. demand)
-	pv_ = g_e - d_e
+	pv_ = g_e - d_e - EV
 
 	# charge to max if SOC less than 95%
 	if pv_ > 0 && Soc_b < (0.95 * b.soc_max)
@@ -262,39 +272,49 @@ end
 
 
 function step!(env::Shems, s, a; track=0)
-	Soc_b, Soc_ev, d_e, d_ev, g_e, p_buy, h_cos, h_sin, season = env.state
+	Soc_b, Soc_ev, c_ev, d_e, g_e, p_buy, h_cos, h_sin, season = env.state
 
 	if track >= 0
-		B_target, EV_target = a
-		B, EV = action(env, ShemsAction(B_target, EV_target))
-		env.a = ShemsAction(B_target, EV_target)
+		B_target, EV_target = a  # soc targets are taken from the actors actions
+		B, EV = action(env, ShemsAction(B_target, EV_target))  # actual charge amounts determined
+		env.a = ShemsAction(B_target, EV_target)   # why do we need this line here?
 	elseif track < 0
-		B_target, FH_target = zeros(Float32,2)
+		B_target, EV_target = zeros(Float32,2)
 		B, EV = a
 		env.a = ShemsAction(B_target, EV_target)
 	end
 
-  	pv_, BD, BC, EVD, EVC, abort, comfort = zeros(7)
-	PV_DE, PV_B, PV_EV, PV_GR, B_DE, B_EV, B_GR, GR_DE, GR_EV, GR_B = zeros(10)
+  	pv_, BD, BC, EVC, abort, comfort = zeros(6)
+	PV_DE, PV_B, PV_EV, PV_GR, B_DE, B_EV, B_GR, GR_DE, GR_EV, GR_B, EX_EV = zeros(11)
 
 	############# DETERMINE FLOWS ###################################
 	# fill only up to max level
-
-    # TBC: PV_EV, B_EV, GR_EV
-
-
+	
 	if B < -0.01 # battery discharging, restrictions discharging rate and soc
 		BD = clamp(-B, 0.001, min(b.rate_max,  ((1 - b.loss - 1f-7) *Soc_b)) )
 	end
 
-    if EV < -0.01 # battery discharging, restrictions discharging rate and soc
-		EVD = clamp(-EV, 0.001, min(ev.rate_max,  ((1 - ev.loss - 1f-7) *Soc_ev)) )
-	end
-
 	#---------------- PV generation greater than electricity demand -------------
+	
 	if (g_e * pv.eta) > d_e
 		PV_DE = d_e
   		pv_ = (g_e * pv.eta) - PV_DE # PV left
+		# heat pump (only HP_FH or HP_HW can be >0)
+		if  pv_ > EV
+			PV_EV = EV
+			pv_ -= PV_EV
+		elseif pv_ <= EV
+			PV_EV = pv_
+			pv_ = 0
+			if BD > (EV - PV_EV) / b.eta # EV from battery?
+				B_EV = (EV - PV_EV)
+				BD -= B_EV / b.eta
+			elseif BD <= (EV - PV_EV) / b.eta
+				B_EV = BD * b.eta
+				BD = 0
+				GR_EV = (EV - PV_EV) - B_EV 		# slack variable EV
+			end
+		end	
 		
 	# -------------- not enough PV for electr. demand --------------------------
 	elseif (g_e * pv.eta) <= d_e # electr. demand
@@ -304,10 +324,19 @@ function step!(env::Shems, s, a; track=0)
 		if BD > (d_e / b.eta) # from battery?
 			B_DE = d_e
 			BD -= B_DE / b.eta
+			if BD > (EV / b.eta)
+				B_EV = EV
+				BD -= B_EV / b.eta
+			elseif BD <= (EV / b.eta)
+				B_EV = BD * b.eta
+				BD = 0
+				GR_EV = EV - B_EV		# slack variable EV
+			end
 		elseif BD <= (d_e / b.eta)
 			B_DE = BD * b.eta
 			BD = 0
 			GR_DE = d_e - B_DE						# slack variable demand
+			GR_EV = EV
 		end
 	end
 
@@ -332,7 +361,26 @@ function step!(env::Shems, s, a; track=0)
 	################### Next states ############################
 
 	# Battery
-	env.state.Soc_b = (1 - b.loss) * (Soc_b + PV_B + GR_B - ( (B_DE + B_GR) / b.eta ) )
+	env.state.Soc_b = (1 - b.loss) * (Soc_b + PV_B + GR_B - ( (B_DE + B_EV + B_GR) / b.eta ) )  # new Soc_b in kWh
+
+	# Electric Vehicle
+	env.state.Soc_ev = Soc_ev + (PV_EV + B_EV + GR_EV) / (ev.soc_max - ev.soc_min) # new Soc_ev in %
+
+	#TBC: where do I add the comfort violation of battery not beign full?
+	#TBC: do I need to force set Soc_ev to 1 somehow, when c_ev = 0? or =-1?
+	#TBC: Or can I manage the action for EV_target, with comfort violations alone? 
+	# TBC: EG if c_ev = 0, comfort violation = (1 - EV_target)
+
+	comfort = 0
+	EX_EV = 0
+
+	if c_ev == 0 && Soc_ev < 1  # 0: end of a transaction, EV is being disconnected
+		# not charged to potential (full, or what could have been)
+		comfort = - (1 - Soc_ev) * discomfort_cost #TBC: define somewhere the discomfort_cost: the cost of each %p that the desired charging amount of the transaction was missed by
+		EX_EV = (1 - Soc_ev) * (ev.soc_max - ev.soc_min) # kWh that was not charged into the EV and needs to be charged elsewhere
+		env.state.Soc_ev = 1 # Electric Vehicle is disconnected and its soc is set to 1 for the duration of being disconnected.
+	end
+
 	# Set uncertain parts of next state
 	next_state!(env)
 	env.step += 1
@@ -340,16 +388,17 @@ function step!(env::Shems, s, a; track=0)
 
 	################### DETERMINE REWARD ############################
 
-	comfort = 0 
+	#comfort = 0 #TBC: add comfort violation for not fully charged EV: if c_ev == 0 ...
 	b_degr = 0 #- 0.01 * (abs(B) > 0.01)   # abort penalty when discomfort abort
 	abort = - 0 * finished(env, env.state)  # abort penalty when discomfort abort
-	env.reward =  (m.sell_discount * p_buy * (PV_GR + B_GR)) - (p_buy * (GR_DE + GR_B)) -
+
+	env.reward =  (m.sell_discount * p_buy * (PV_GR + B_GR)) - (p_buy * (GR_DE + GR_B + GR_EV + EX_EV)) -
 						b_degr +
 						abort
 
-	results = hcat(Soc_b, Soc_ev, 
-					env.reward, comfort, b_degr+abort, PV_DE, B_DE, GR_DE, PV_B, PV_GR, PV_EV, B_EV, GR_EV,
-					GR_B, B_GR, env.idx, B, B_target, EV_target)
+	results = hcat(Soc_b, Soc_ev, env.reward, comfort, b_degr+abort, PV_DE, B_DE, GR_DE,
+					PV_B, PV_GR, PV_EV, B_EV, GR_EV, EX_EV, GR_B, B_GR, env.idx, B, B_target,
+					EV, EV_target)
 
 	if track == 0
 		return env.reward, Vector{Float32}(env.state)
