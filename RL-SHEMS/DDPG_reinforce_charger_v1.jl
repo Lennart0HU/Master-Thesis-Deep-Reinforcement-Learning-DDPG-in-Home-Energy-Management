@@ -1,33 +1,5 @@
-#LU: Original code scheduler:
-#= try 
-	# run batch on cluster
-	println("Use cluster setup.")
-	include("out/input/$(ENV["JOB_ID"])--input.jl") # contains the input data
-	sleep(400) # sleep for the input to load before calling algo
-catch 
-	# run single file
-	println("Use single run setup.")
-	include("input.jl") # contains the input data
-end =#
-
-#include("input.jl") #LU: quote above and add this line to bypass scheduler
-
-#LU: Own scheduler code:
-#=
-try 
-	# run on bash scheduler
-	println("Use bash scheduler.")
-	include("input.jl") # contains the input data
-	println("Starting script with JOB_ID: $(ENV["JOB_ID"]), TASK_ID: $(ENV["TASK_ID"]) on GPU: $(gpu_id)!")
-catch
-	# run single file
-	println("Use single run setup.")
-	include("input.jl") # contains the input data
-end
-=#
-
 # scheduler run set up:
-#=
+
 println("Use bash scheduler.")
 gpu_id = parse(Int, ENV["GPU_ID"])	
 include("input.jl") # include("input.jl")
@@ -35,13 +7,12 @@ using CUDA
 CUDA.device!(gpu_id)
 printGPU = CUDA.device()
 println("Starting script with JOB_ID: $(ENV["JOB_ID"]), TASK_ID: $(ENV["TASK_ID"]) on GPU: $(printGPU)!")
-=#
 
+#=
 # single run set up (also change in input.jl!):
 println("Use single run setup.")
 include("input.jl") # contains the input data
-
-
+=#
 
 include("algorithms/$(algo).jl") # contains all training functions
 include("src/memory_plotting_saving.jl") # contains all ploting and rendering functions

@@ -188,7 +188,7 @@ function episode!(env::Shems; NUM_STEPS=EP_LENGTH["train"], train=true, render=f
   local reward_eps=0f0
   local noise_eps=0f0
   local last_step = 1
-  local results = Array{Float64}(undef, 0, 19)
+  local results = Array{Float64}(undef, 0, 21)
 
   for step=1:NUM_STEPS
 	# create individual random seed

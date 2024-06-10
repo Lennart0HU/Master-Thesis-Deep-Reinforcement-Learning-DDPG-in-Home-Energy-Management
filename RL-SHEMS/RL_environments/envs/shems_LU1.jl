@@ -29,17 +29,14 @@ struct Battery
 end
 
 struct ElectricVehicle
-    eta::Float32
     soc_min::Float32
     soc_max::Float32
     rate_max::Float32
-    loss::Float32
 end
 
 struct Market
     sell_discount::Float64
-	comfort_weight_hw::Float64
-	comfort_weight_fh::Float64
+	comfort_weight_ev::Float64
 end
 
 # PV(eta)
@@ -47,9 +44,9 @@ pv = PV(0.95f0);
 
 # Battery(eta, soc_min, soc_max, rate_max, loss)
 b = Battery(0.98f0, 0f0, 10f0, 4.6f0, 0.00003f0);
-ev = ElectricVehicle(0.98f0, 0f0, ev_cap, 11f0, 0.00003f0);   #TBC: DEFINE ev_cap!! delete whats not needed. Only rate_max needed?
+ev = ElectricVehicle(0f0, 48_249f0, 11f0);   #TBC: soc_max should be defined outside of the env somehow!! delete whats not needed. Only rate_max needed?
 # Market(price, comfort_weight)
-m = Market(0.3f0, 1f0, 1f0)
+m = Market(0.3f0, 1f0)		# Adjust here the penalty for not charging the full amount
 
 mutable struct ShemsState{T<:AbstractFloat} <: AbstractVector{T}
   Soc_b::T
@@ -76,7 +73,7 @@ function Base.getindex(s::ShemsState, i::Int)
 	ifelse(i == 3, s.c_ev,
 	ifelse(i == 4, s.d_e,
 	ifelse(i == 5, s.g_e,
-	ifelse(i == 6, s.p_buy,
+	ifelse(i == 6, s.p_buy,  #TBC
 	ifelse(i == 7, s.h_cos,
 	ifelse(i == 8, s.h_sin,
 	s.season))))))))
@@ -199,7 +196,7 @@ function next_state!(env::Shems)	# determining endogenous states for the next st
 	env.state.c_ev = df[idx, :h_countdown]
 
 	if env.state.c_ev >= 0 && df[env.idx, :h_countdown] == -1 # if EV is NEWLY connected
-		env.state.soc_ev = df[idx, :soc_ev] # load soc of newly arrived EV from the data
+		env.state.Soc_ev = df[idx, :soc_ev] # load soc of newly arrived EV from the data
 	end # else soc_ev was already connected at the previous step and the soc remains unchanged until an action is taken
 	
 	env.state.d_e = df[idx, :electkwh]
@@ -299,7 +296,6 @@ function step!(env::Shems, s, a; track=0)
 	if (g_e * pv.eta) > d_e
 		PV_DE = d_e
   		pv_ = (g_e * pv.eta) - PV_DE # PV left
-		# heat pump (only HP_FH or HP_HW can be >0)
 		if  pv_ > EV
 			PV_EV = EV
 			pv_ -= PV_EV
@@ -376,7 +372,7 @@ function step!(env::Shems, s, a; track=0)
 
 	if c_ev == 0 && Soc_ev < 1  # 0: end of a transaction, EV is being disconnected
 		# not charged to potential (full, or what could have been)
-		comfort = - (1 - Soc_ev) * discomfort_cost #TBC: define somewhere the discomfort_cost: the cost of each %p that the desired charging amount of the transaction was missed by
+		comfort = - (1 - Soc_ev)
 		EX_EV = (1 - Soc_ev) * (ev.soc_max - ev.soc_min) # kWh that was not charged into the EV and needs to be charged elsewhere
 		env.state.Soc_ev = 1 # Electric Vehicle is disconnected and its soc is set to 1 for the duration of being disconnected.
 	end
@@ -388,11 +384,11 @@ function step!(env::Shems, s, a; track=0)
 
 	################### DETERMINE REWARD ############################
 
-	#comfort = 0 #TBC: add comfort violation for not fully charged EV: if c_ev == 0 ...
 	b_degr = 0 #- 0.01 * (abs(B) > 0.01)   # abort penalty when discomfort abort
 	abort = - 0 * finished(env, env.state)  # abort penalty when discomfort abort
 
 	env.reward =  (m.sell_discount * p_buy * (PV_GR + B_GR)) - (p_buy * (GR_DE + GR_B + GR_EV + EX_EV)) -
+						m.comfort_weight_ev * comfort
 						b_degr +
 						abort
 
