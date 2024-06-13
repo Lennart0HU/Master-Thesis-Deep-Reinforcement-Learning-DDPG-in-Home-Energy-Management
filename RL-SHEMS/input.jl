@@ -19,10 +19,10 @@ using CSV, DataFrames
 gr()
 
 #------------ local machine ----------
-Job_ID = 1006241 #1149869
-Task_ID = 1 #1149869-1 #ENV["SGE_TASK_ID"]
-seed_run = 1 # run inference over all seeds 
-num_seeds = 1 #40
+#Job_ID = 1006241 #1149869
+#Task_ID = 1 #1149869-1 #ENV["SGE_TASK_ID"]
+#seed_run = 1 # run inference over all seeds 
+#num_seeds = 1 #40
 
 #--------cluster jobs------------
 #Job_ID = ENV["JOB_ID"]
@@ -31,14 +31,11 @@ num_seeds = 1 #40
 #--------bash scheduler jobs------------
 
 Job_ID = ENV["JOB_ID"]
-Task_ID = ENV["TASK_ID"] #LU: added for bash scheduler
+Task_ID = ENV["TASK_ID"]
 seed_run = parse(Int, Task_ID)
-num_seeds = 10
+num_seeds = 2
 
-
-
-Charger_ID = "Charger01"
-
+Charger_ID = "Charger06"
 
 #-------------------------------- INPUTS --------------------------------------------
 train = 1 # 0 1
@@ -57,7 +54,7 @@ using .ShemsEnv_LU1: Shems
 
 case = "$(Charger_ID)_$(season)_$(algo)_$(price)_base-256_gn.1_Env-U8-no-layer-norm"
 run = "eval" # "test", "eval"
-NUM_EP = 5001 #50_000
+NUM_EP = 1001 #50_000
 L1 = 300 #256
 L2 = 600 #256
 idx=NUM_EP
@@ -81,7 +78,7 @@ MIN_EXP_SIZE = 24_000 #24_000
 memory = CircularBuffer{Any}(MEM_SIZE)
 
 #--------------------------------- Game environment ---------------------------
-EP_LENGTH = Dict("train" => 24,
+EP_LENGTH = Dict("train" => 72,
 					("summer", "eval") => 359, ("summer", "test") => 767,
 					("winter", "eval") => 359, ("winter", "test") => 719,
 					("both", "eval") => 719,   ("both", "test") => 1487,

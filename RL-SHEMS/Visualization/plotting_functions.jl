@@ -3,7 +3,7 @@ function read_data(season; tariff="fix", job_id = "1063970", case="$(season)_L2_
     version = "v12"
     NUM_STEPS = 24
     
-    Input_df = CSV.read("../data/$(season)_$(run)_$(tariff).csv", DataFrame);
+    Input_df = CSV.read("../data/Charger06_$(season)_$(run)_$(tariff).csv", DataFrame);
     
     L1 = 300
     L2 = 600  
@@ -20,7 +20,7 @@ function read_data(season; tariff="fix", job_id = "1063970", case="$(season)_L2_
        return Data_df
     end
 
-    Flow_df=CSV.read("../out/tracker/$(job_id)_$(run)_results_$(version)_$(NUM_STEPS)_$(NUM_EP)_"*
+    Flow_df=CSV.read("../out/tracker/$(job_id)_$(run)_results_charger_$(version)_$(NUM_STEPS)_$(NUM_EP)_"*
                         "$(L1)_$(L2)_$(case)_123$(seed)_$(NUM_EP).csv",DataFrame);
     #println(size(Flow_df),  size(Input_df))
     Data_df = hcat(Flow_df[1:end, :], Input_df[1:end-1, :]) # cut index + hour + last input (no action)
@@ -44,6 +44,7 @@ function bar_target_B(Data_df, start, yaxis, title)
     xaxis!("time", font(10, "serif-roman"))
 end
 
+#=
 function bar_target_HP(Data_df, start, yaxis, title)
     # SOCs
     @df Data_df[start:start+23,:] groupedbar(
@@ -60,13 +61,30 @@ function bar_target_HP(Data_df, start, yaxis, title)
     yaxis!("$(yaxis)", font(10, "serif-roman"), tickfontsize=10)
     xaxis!("time", font(10, "serif-roman"))
 end
+=#
+function bar_target_EV(Data_df, start, yaxis, title)
+    # SOCs
+    @df Data_df[start:start+23,:] groupedbar(
+        100 .*((:Soc_ev), xticks=0:6:24, yticks=0:25:100, tickfontsize=10, ylim=(0,100),
+        colour =[:firebrick],
+        label=["Soc_ev"], legend=false, legendfontsize=8, title="$(title)", titlefontsize=11,
+        titlelocation=:left, linewidth= 0, alpha=0.5, bottom_margin=4Plots.mm);
+  
+        # Targets
+    @df Data_df[start:start+23,:] scatter!(
+        100 .*[:EV_tar], colour =[:firebrick], marker=(:circle, stroke(.5)), markersize = 3,
+        label=["EV_tar"], legend=false, legendfontsize=8);
+
+    yaxis!("$(yaxis)", font(10, "serif-roman"), tickfontsize=10)
+    xaxis!("time", font(10, "serif-roman"))
+end
 
 
 function bar_actions(Data_df, start, yaxis, title)
     # Battery
     @df Data_df[start:start+23,:] groupedbar(
-        [:B :HP], xticks=0:6:24, yticks=-5:2:5, tickfontsize=10, ylim=(-5,5), colour =[:purple :firebrick],
-        label=["B" "HP"], legend=false, legendfontsize=8, title="$(title)", titlefontsize=11,
+        [:B :EV], xticks=0:6:24, yticks=-5:2:5, tickfontsize=10, ylim=(-5,5), colour =[:purple :firebrick],
+        label=["B" "EV"], legend=false, legendfontsize=8, title="$(title)", titlefontsize=11,
         titlelocation=:left, left_margin=2Plots.mm, linewidth= 0);
 
     plot!(0:23, ones(24,1)*4.6, linestyle=:dot, linewidth= 2, colour=:purple)
@@ -96,8 +114,8 @@ function bar_PV(Data_df, start, yaxis, title)
 
     # bars PV
     @df Data_df[start:start+23,:] groupedbar!(
-        [:PV_HP :PV_GR :PV_B :PV_DE], colour =[:firebrick :grey :purple :orange],
-        label=["→ hp" "→ gr" "→ b" "→ de"], legend=false, bar_position = :stack, alpha=0.8);
+        [:PV_EV :PV_GR :PV_B :PV_DE], colour =[:firebrick :grey :purple :orange],
+        label=["→ ev" "→ gr" "→ b" "→ de"], legend=false, bar_position = :stack, alpha=0.8);
 #=
     # bars B
    @df Data_df[start:start+23,:] bar!(
@@ -129,7 +147,7 @@ function bar_demand(Data_df, start, yaxis, title)
     xaxis!("", font(10, "serif-roman"))
 end
 
-function bar_heat(Data_df, start, yaxis, title)
+#=function bar_heat(Data_df, start, yaxis, title)
     # hot water demand
     @df Data_df[start:start+23,:] plot(
         [:hotwaterkwh]+[:heatingkwh], fillrange = [:heatingkwh], yticks=0:2:10, ylim=(0,11), xticks=0:6:24,
@@ -148,34 +166,55 @@ function bar_heat(Data_df, start, yaxis, title)
     plot!(0:23, ones(24,1)*3, linestyle=:dot, linewidth= 2, colour = :grey)
     yaxis!("$(yaxis)", font(10, "serif-roman"))
     xaxis!("", font(10, "serif-roman"))
+end=#
+
+function bar_ev(Data_df, start, yaxis, title)
+    # charge demand
+    @df Data_df[start:start+23,:] plot(
+        [:EV], fillrange = [:EV], yticks=0:2:10, ylim=(0,11), xticks=0:6:24,
+        tickfontsize=10, colour =:steelblue, label=["d_fh"], legend=false, alpha=0.2, title="$(title)",
+        titlefontsize=11, titlelocation=:left, left_margin=2Plots.mm);
+
+    # heat demand
+    @df Data_df[start:start+23,:] plot!(
+        [:EV], fillrange=zeros(24), colour =:firebrick, label=["d_fh"], alpha=0.2);
+
+    # bars
+    @df Data_df[start:start+23,:] groupedbar!(
+        [:B_EV :GR_EV :PV_EV], colour =[:purple :grey :gold],
+        label=["PM_DE" "B_DE" "GR_DE" "PV_DE"], bar_position = :stack, alpha=0.8);
+
+    plot!(0:23, ones(24,1)*3, linestyle=:dot, linewidth= 2, colour = :grey)
+    yaxis!("$(yaxis)", font(10, "serif-roman"))
+    xaxis!("", font(10, "serif-roman"))
 end
 
 function bar_comfort(Data_df, start, yaxis, title)
     @df Data_df[start:start+23,:] groupedbar(
-        ([:HP_FH :HP_HW].>0.01)*200, colour =[:firebrick :steelblue],
+        ([:EX_EV].>0.01)*200, colour =[:firebrick],
         ylim=(18,25), yticks=19:1:24, xticks=0:6:24, tickfontsize=10, legendfontsize=6,
-        label=["Mod_fh" "Mod_hw"], legend=false, bar_position = :stack, alpha=0.15, title="$(title)", titlefontsize=11,
+        label=["EX_EV"], legend=false, bar_position = :stack, alpha=0.15, title="$(title)", titlefontsize=11,
         titlelocation=:left, left_margin=2Plots.mm);
 
     # state-of-charge fh
     @df Data_df[start:start+23,:] plot!(
-        [:Temp_FH],  colour =:firebrick,
-        label=["T_fh"], legend=false, linewidth= 2.0);
+        [:Soc_ev],  colour =:firebrick,
+        label=["Soc_ev"], legend=false, linewidth= 2.0);
 
-    plot!(0:23, ones(24,1)*19, linestyle=:dot, linewidth= 2, colour = :firebrick)
-    plot!(0:23, ones(24,1)*24, linestyle=:dot, linewidth= 2, colour = :firebrick)
+    #plot!(0:23, ones(24,1)*19, linestyle=:dot, linewidth= 2, colour = :firebrick)
+    #plot!(0:23, ones(24,1)*24, linestyle=:dot, linewidth= 2, colour = :firebrick)
     yaxis!("$(yaxis)", font(10, "serif-roman"))
     xaxis!("time", font(10, "serif-roman"))
-    
+    #=
     plt = twinx()
     # state-of-charge hw
     @df Data_df[start:start+23,:] plot!(
         plt, [:Vol_HW], ylim=(10,190), yticks=20:40:180, xticks=[], tickfontsize=10, colour = :steelblue,
         label=["V_fh"], legend=false, linewidth= 2.0, linestyle=:dash, grid=false);
-    yaxis!(font(10, "serif-roman"))
+    yaxis!(font(10, "serif-roman"))=#
 
-    plot!(plt, 0:23, ones(24,1)*20, linestyle=:dot, linewidth= 2, colour = :steelblue)
-    plot!(plt, 0:23, ones(24,1)*180, linestyle=:dot, linewidth= 2, colour = :steelblue)
+    #plot!(plt, 0:23, ones(24,1)*20, linestyle=:dot, linewidth= 2, colour = :steelblue)
+    #plot!(plt, 0:23, ones(24,1)*180, linestyle=:dot, linewidth= 2, colour = :steelblue)
 end
 
 function bar_row(plotfunction, Data_df, start, yaxis, title, length; legend=true)
@@ -193,7 +232,7 @@ end
 function plot_legend(plotfunction)
     if plotfunction == bar_actions
         plot((1:2)', xlim=(4,8), linestyle=[:solid :solid], colour = [:purple :firebrick], legend=(-.5,.9),
-            label=["  B" "  HP"],framestyle= :none, legendfontsize=10,legendfontfamily="serif-roman")
+            label=["  B" "  EV"],framestyle= :none, legendfontsize=10,legendfontfamily="serif-roman")
         
     elseif plotfunction == bar_target_B
         scatter((1:1)', xlim=(4,8), colour = :purple, legend=(-.5,.9), alpha=0.5,
@@ -203,18 +242,18 @@ function plot_legend(plotfunction)
         scatter!((1:1)', xlim=(4,8), colour = :purple, legend=(-.5,.9),
             label="  Tar_b",framestyle= :none, marker=(:circle, stroke(1)), legendfontsize=10,legendfontfamily="serif-roman")
         
-    elseif plotfunction == bar_target_HP
+    elseif plotfunction == bar_target_EV
         scatter((1:2)', xlim=(4,8), colour = [:firebrick :steelblue], legend=(-.5,.9), alpha=0.5,
-                    label=["  %-SOC_fh" "  %-SOC_hw"],framestyle= :none, legendfontsize=10,legendfontfamily="serif-roman", 
+                    label=["  %-SOC_ev"],framestyle= :none, legendfontsize=10,legendfontfamily="serif-roman", 
                     marker=(:rect, stroke(0)))
         
         scatter!((1:2)', xlim=(4,8), colour = [:firebrick :steelblue], legend=(-.5,.9),
-                    label=["  Tar_fh" "  Tar_hw"], legendfontsize=10, legendfontfamily="serif-roman",
+                    label=["  Tar_ev"], legendfontsize=10, legendfontfamily="serif-roman",
                     marker= (:circle, stroke(1)))
         
     elseif plotfunction == bar_PV
         scatter((1:4)', xlim=(4,8), colour = [:firebrick :grey :purple :orange], legend=(-.5,.9),
-                label=["  pv→hp" "  pv→gr" "  pv→b" "  pv→d_e"], framestyle= :none, marker= (:rect, stroke(0)),
+                label=["  pv→ev" "  pv→gr" "  pv→b" "  pv→d_e"], framestyle= :none, marker= (:rect, stroke(0)),
                 legendfontsize=10,legendfontfamily="serif-roman")
         plot!((1:3)', xlim=(4,8), linestyle=[:solid :solid :dot], colour = [:gold :purple :purple],
                 thickness_scaling=6,label=["  ge" "  Soc_b" "  b_max"])
@@ -225,18 +264,18 @@ function plot_legend(plotfunction)
             legendfontsize=10,legendfontfamily="serif-roman")
         plot!((1:1)', xlim=(4,8), linestyle=[:solid], colour=:orange, label="  d_e")
 
-    elseif plotfunction == bar_heat
+    elseif plotfunction == bar_ev
         scatter((1:5)', xlim=(4,8), colour =[:grey :purple :gold :firebrick :steelblue], legend=(-.5,.76),
             label=["  gr→hp" "  b→hp" "  pv→hp" "  d_fh" "  d_hw"], framestyle= :none, marker= (:rect,
                 stroke(0)), legendfontsize=10, legendfontfamily="serif-roman", alpha=[1 1 1 .2 .2])
         plot!((1:1)', xlim=(4,8), linestyle=:dot, colour = :grey, label="  hp_max")
 
     elseif plotfunction == bar_comfort
-        scatter((1:2)', xlim=(4,8), colour = [:firebrick :steelblue], legend=(-.3,.64),
-            label=["  mod_fh" "  mod_hw"], framestyle= :none, marker= (:rect, stroke(0)),
+        scatter((1:2)', xlim=(4,8), colour = [:firebrick], legend=(-.3,.64),
+            label=["ev"], framestyle= :none, marker= (:rect, stroke(0)),
             legendfontsize=10, legendfontfamily="serif-roman", alpha=[.2 .2])
-        plot!((1:4)', xlim=(4,8), linestyle=[:dot :dot :solid :dash],
-            colour = [:firebrick :steelblue :firebrick :steelblue], label=["  lim_fh" "  lim_hw" "  T_fh" "  V_hw"])
+        plot!((1:4)', xlim=(4,8), linestyle=[:dot :solid],
+            colour = [:firebrick :firebrick], label=["  lim_fh" "  lim_hw" "  T_fh" "  V_hw"])
     end
 end
 
@@ -244,20 +283,20 @@ end
 function calc_profit(Data_df; ratio=3)
     return convert.(Float64, 
                round.(sum(Data_df[!,"p_sell"] .* Data_df[!,"PV_GR"] - 
-                    (ratio * Data_df[!,"p_sell"]) .* sum(Data_df[!,j] for j in ["GR_DE", "GR_HP"])), digits=2))
+                    (ratio * Data_df[!,"p_sell"]) .* sum(Data_df[!,j] for j in ["GR_DE", "GR_EV", "EX_EV"])), digits=2))
 end
 
 function calc_energy_use(Data_df)
     return convert.(Float64, 
                 round.(sum(
-                    sum(Data_df[!,j] for j in ["PV_DE", "B_DE", "GR_DE", "HP_FH", "HP_HW"])), digits=2))
+                    sum(Data_df[!,j] for j in ["PV_DE", "B_DE", "GR_DE", "PV_EV", "GR_EV", "B_EV", "EX_EV"])), digits=2))
 end
 
 function calc_self_consumption(Data_df)
     gd = groupby(Data_df, ["month", "day"])
     Data_df_sum = combine(gd, valuecols(gd) .=> sum, renamecols=false)
     Data_df_sum[!,"SeCo"] = ((Data_df_sum[!,"PV_DE"] .+
-                                Data_df_sum[!,"PV_HP"] .+
+                                Data_df_sum[!,"PV_EV"] .+
                                     Data_df_sum[!,"PV_B"]) ./ Data_df_sum[!,"PV_generation"])
 
     return convert.(Float64, 
@@ -267,13 +306,13 @@ end
 function calc_self_sufficiency(Data_df)
     gd = groupby(Data_df, ["month", "day"])
     Data_df_sum = combine(gd, valuecols(gd) .=> sum, renamecols=false)
-    Data_df_sum[!,"SeSu"] = 1 .- (Data_df_sum[!,"GR_DE"] .+ Data_df_sum[!,"GR_HP"]) ./ 
-                    sum(Data_df_sum[!,j] for j in ["PV_DE", "B_DE", "GR_DE", "HP_FH", "HP_HW"])
+    Data_df_sum[!,"SeSu"] = 1 .- (Data_df_sum[!,"GR_DE"] .+ Data_df_sum[!,"GR_EV"] .+ Data_df_sum[!,"EX_EV"]) ./ 
+                    sum(Data_df_sum[!,j] for j in ["PV_DE", "B_DE", "GR_DE",  "PV_EV", "GR_EV", "B_EV", "EX_EV"])
     return convert.(Float64, 
                round.(100 * sum(Data_df_sum[!,"SeSu"]) / nrow(Data_df_sum), digits=2))
 end
 
 function calc_comfort_violations(Data_df)
     return convert.(Float64, 
-        round.(sum(sum(Data_df[!,j] for j in ["V_HW_plus", "V_HW_minus", "T_FH_plus", "T_FH_minus"])), digits=2))
+        round.(sum(sum(Data_df[!,j] for j in ["discomfort"])), digits=2))
 end

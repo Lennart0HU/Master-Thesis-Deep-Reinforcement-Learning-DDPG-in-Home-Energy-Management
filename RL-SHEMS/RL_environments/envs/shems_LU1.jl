@@ -36,7 +36,7 @@ end
 
 struct Market
     sell_discount::Float64
-	comfort_weight_ev::Float64
+	discomfort_weight_ev::Float64
 end
 
 # PV(eta)
@@ -44,8 +44,8 @@ pv = PV(0.95f0);
 
 # Battery(eta, soc_min, soc_max, rate_max, loss)
 b = Battery(0.98f0, 0f0, 10f0, 4.6f0, 0.00003f0);
-ev = ElectricVehicle(0f0, 48_249f0, 11f0);   #TBC: soc_max should be defined outside of the env somehow!! delete whats not needed. Only rate_max needed?
-# Market(price, comfort_weight)
+ev = ElectricVehicle(0f0, 48.249f0, 11f0);   #TBC: soc_max should be defined outside of the env somehow!! delete whats not needed. Only rate_max needed?
+# Market(price, discomfort_weight)
 m = Market(0.3f0, 1f0)		# Adjust here the penalty for not charging the full amount
 
 mutable struct ShemsState{T<:AbstractFloat} <: AbstractVector{T}
@@ -98,7 +98,7 @@ mutable struct ShemsAction{T<:AbstractFloat} <: AbstractVector{T}
   EV::T
 end
 
-ShemsAction() = ShemsAction(0.7f0, 0.7f0)
+ShemsAction() = ShemsAction(0.7f0, 1f0)
 
 Base.size(::ShemsAction) = (2,)
 Base.minimum(::ShemsAction) = (0f0, 0f0)
@@ -281,7 +281,7 @@ function step!(env::Shems, s, a; track=0)
 		env.a = ShemsAction(B_target, EV_target)
 	end
 
-  	pv_, BD, BC, EVC, abort, comfort = zeros(6)
+  	pv_, BD, BC, EVC, abort, discomfort = zeros(6)
 	PV_DE, PV_B, PV_EV, PV_GR, B_DE, B_EV, B_GR, GR_DE, GR_EV, GR_B, EX_EV = zeros(11)
 
 	############# DETERMINE FLOWS ###################################
@@ -367,14 +367,17 @@ function step!(env::Shems, s, a; track=0)
 	#TBC: Or can I manage the action for EV_target, with comfort violations alone? 
 	# TBC: EG if c_ev = 0, comfort violation = (1 - EV_target)
 
-	comfort = 0
+	discomfort = 0
+	penalty = 0
 	EX_EV = 0
 
 	if c_ev == 0 && Soc_ev < 1  # 0: end of a transaction, EV is being disconnected
 		# not charged to potential (full, or what could have been)
-		comfort = - (1 - Soc_ev)
+		disccomfort = 1 - Soc_ev
 		EX_EV = (1 - Soc_ev) * (ev.soc_max - ev.soc_min) # kWh that was not charged into the EV and needs to be charged elsewhere
 		env.state.Soc_ev = 1 # Electric Vehicle is disconnected and its soc is set to 1 for the duration of being disconnected.
+	elseif c_ev < 0 && Soc_ev < 1
+		penalty = 1 - EV_target
 	end
 
 	# Set uncertain parts of next state
@@ -388,13 +391,17 @@ function step!(env::Shems, s, a; track=0)
 	abort = - 0 * finished(env, env.state)  # abort penalty when discomfort abort
 
 	env.reward =  (m.sell_discount * p_buy * (PV_GR + B_GR)) - (p_buy * (GR_DE + GR_B + GR_EV + EX_EV)) -
-						m.comfort_weight_ev * comfort
+						m.discomfort_weight_ev * discomfort -
+						penalty + # I could add a penalty weight here, like for discomfort
 						b_degr +
 						abort
 
-	results = hcat(Soc_b, Soc_ev, env.reward, comfort, b_degr+abort, PV_DE, B_DE, GR_DE,
-					PV_B, PV_GR, PV_EV, B_EV, GR_EV, EX_EV, GR_B, B_GR, env.idx, B, B_target,
-					EV, EV_target)
+	#results = hcat(Soc_b, Soc_ev, env.reward, comfort, b_degr+abort, PV_DE, B_DE, GR_DE,
+	#				PV_B, PV_GR, PV_EV, B_EV, GR_EV, EX_EV, GR_B, B_GR, env.idx, B, B_target,
+	#				EV, EV_target)
+	results = hcat(env.idx, c_ev, EV_target, EV, Soc_ev, env.reward, discomfort, penalty, PV_DE, B_DE, GR_DE,
+					PV_B, PV_GR, PV_EV, B_EV, GR_EV, EX_EV, GR_B, B_GR, B, B_target, Soc_b
+					)
 
 	if track == 0
 		return env.reward, Vector{Float32}(env.state)

@@ -56,7 +56,7 @@ if plot_result == true
 			$(mean(total_reward[end-round(Int, length(total_reward)/20):end]))")
 	println("eval (last $(round(Int, size(score_mean)[1]/10)+1))=
 			$(mean(score_mean[end-round(Int, size(score_mean)[1]/10):end,1]))")
-	plot_scores(ymin = -4, rng=rng_run)
+	plot_scores(ymin = -10_000, rng=rng_run)   #ymin = -4
 end
 
 if plot_all == true
@@ -69,7 +69,7 @@ if plot_all == true
 			test_rng_run = parse(Int, string(seed_ini)*string(i))
 			score_mean_all[:,i] = loadBSON(scores_only=true, rng=test_rng_run)[2] |> cpu
 		end
-		plot_all_scores(ymin = -50, score_mean=score_mean_all) #ymin = -10, 
+		plot_all_scores(ymin = -20_000, score_mean=score_mean_all) #ymin = -10,  # ymin = -50
 	end
 end
 
@@ -77,7 +77,7 @@ end
 # ------------------------- track evaluation ---------------------------------------
 if track == 1 # track last and best training run
 	if seed_run == num_seeds
-		for i in 1:num_seeds
+		for i in 1:num_seeds	
 			test_rng_run = parse(Int, string(seed_ini)*string(i))
 			# track last episode weights
 			ac, tr, sm, best_eval, nm = loadBSON(rng=test_rng_run)
