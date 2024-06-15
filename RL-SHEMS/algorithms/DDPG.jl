@@ -190,7 +190,9 @@ function episode!(env::Shems; NUM_STEPS=EP_LENGTH["train"], train=true, render=f
   local last_step = 1
   local results = Array{Float64}(undef, 0, 22)
 
-  for step=1:NUM_STEPS
+
+  step = 1
+  while step <= NUM_STEPS
 	# create individual random seed
 	rng_step = parse(Int, string(rng_ep)*string(step))
 	# determine action
@@ -229,7 +231,19 @@ function episode!(env::Shems; NUM_STEPS=EP_LENGTH["train"], train=true, render=f
 	  replay(rng_rpl=rng_step)
 	  # break episode in training
 	  finished(env, s′) && break
+
+	  # extend the training steps if EV currently connected (unless at the end of data set)
+	  #if step == NUM_STEPS && results_new[env.idx, :h_countdown] > -1,
+	#	 && env.idx < 4318 && NUM_STEPS < (EP_LENGTH["train"]*3)
+	#	NUM_STEPS += 1
+	 # end
+
     end
+
+
+
+
+	step += 1
   end
 
   if track == 0

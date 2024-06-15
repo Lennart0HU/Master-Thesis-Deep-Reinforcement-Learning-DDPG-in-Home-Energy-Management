@@ -52,14 +52,19 @@ noise_type = "gn" # "ou", "pn", "gn", "en"
 include("RL_environments/envs/shems_LU1.jl")
 using .ShemsEnv_LU1: Shems
 
-case = "$(Charger_ID)_$(season)_$(algo)_$(price)_base-256_gn.1_Env-U8-no-layer-norm"
+DISCOMFORT_WEIGHT_EV = 5 + 5 * (parse(Int, Job_ID) % 10)
+
+TRAIN_EP_LENGTH = 72 # 24 + 24 * (parse(Int, Job_ID) % 10)
+
+case = "$(Charger_ID)_$(season)_$(algo)_$(price)_gn.1_restr-train_disc$(DISCOMFORT_WEIGHT_EV)"
 run = "eval" # "test", "eval"
-NUM_EP = 1001 #50_000
+NUM_EP = 10001 #50_000
 L1 = 300 #256
 L2 = 600 #256
 idx=NUM_EP
 test_every = 100
 test_runs = 100
+
 
 #-------------------------------------
 seed_ini = 123
@@ -78,7 +83,7 @@ MIN_EXP_SIZE = 24_000 #24_000
 memory = CircularBuffer{Any}(MEM_SIZE)
 
 #--------------------------------- Game environment ---------------------------
-EP_LENGTH = Dict("train" => 72,
+EP_LENGTH = Dict("train" => TRAIN_EP_LENGTH,
 					("summer", "eval") => 359, ("summer", "test") => 767,
 					("winter", "eval") => 359, ("winter", "test") => 719,
 					("both", "eval") => 719,   ("both", "test") => 1487,
@@ -97,7 +102,7 @@ WAIT = Dict(
           ("summer", "DDPG") => 150, ("summer", "TD3") => 1500, ("summer", "SAC") => 5000,
           ("winter", "DDPG") => 200, ("winter", "TD3") => 2000, ("winter", "SAC") => 7000,
           ("both", "DDPG") => 300,   ("both", "TD3") => 3000,  ("both", "SAC") => 10000,
-          ("all", "DDPG") => 50,    ("all", "TD3") => 5000,   ("all", "SAC") => 20_000) 
+          ("all", "DDPG") => 1200,    ("all", "TD3") => 5000,   ("all", "SAC") => 20_000) 
           #("summer", "DDPG") => 1500, ("summer", "TD3") => 1500, ("summer", "SAC") => 5000,  #LU: original code
           #("winter", "DDPG") => 2000, ("winter", "TD3") => 2000, ("winter", "SAC") => 7000,
           #("both", "DDPG") => 3000,   ("both", "TD3") => 3000,  ("both", "SAC") => 10000,

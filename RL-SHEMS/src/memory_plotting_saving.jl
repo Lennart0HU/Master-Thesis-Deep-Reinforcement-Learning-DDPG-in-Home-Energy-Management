@@ -194,21 +194,24 @@ function write_to_tracker_file(;idx=NUM_EP, rng=rng_run, best=false)
 	time=now();
 	date=Date(now());
 	if best == true
-		results = CSV.read("out/tracker/$(Job_ID)_$(run)_results_charger_v1_$(EP_LENGTH["train"])_$(NUM_EP)_"*
-								"$(L1)_$(L2)_$(case)_$(rng)_best.csv", DataFrame)
+		file_name = "out/tracker/$(Job_ID)_$(run)_results_charger_v1_$(EP_LENGTH["train"])_$(NUM_EP)_"*
+						"$(L1)_$(L2)_$(case)_$(rng)_best.csv"
+		results = CSV.read(file_name, DataFrame)
 	elseif idx == NUM_EP
-		results = CSV.read("out/tracker/$(Job_ID)_$(run)_results_charger_v1_$(EP_LENGTH["train"])_$(NUM_EP)_"*
-								"$(L1)_$(L2)_$(case)_$(rng)_$(idx).csv", DataFrame)
+		file_name = "out/tracker/$(Job_ID)_$(run)_results_charger_v1_$(EP_LENGTH["train"])_$(NUM_EP)_"*
+						"$(L1)_$(L2)_$(case)_$(rng)_$(idx).csv"
+		results = CSV.read(file_name, DataFrame)
 	else
-		results = CSV.read("out/tracker/$(Job_ID)_$(run)_results_$(case)_rule_$(idx).csv", DataFrame)
+		file_name = "out/tracker/$(Job_ID)_$(run)_results_$(case)_rule_$(idx).csv"
+		results = CSV.read(filename, DataFrame)
 	end
 	# Overall tracker (rewards without discomfort costs)
 	Tracker = CSV.read("out/Tracker_Charger.csv", DataFrame, header=true);
 	Tracker = vcat(Matrix(Tracker), [time NUM_EP L1  L2  BATCH_SIZE  MEM_SIZE  MIN_EXP_SIZE season  run Job_ID rng case  best idx [
-								sum(results[!, :rewards])] sum(results[!, :discomfort]) sum(results[!, :penalty]) ]);
+								sum(results[!, :rewards])] sum(results[!, :discomfort]) sum(results[!, :penalty]) file_name ]);
 
     CSV.write("out/Tracker_Charger.csv", DataFrame(Tracker,:auto), header=["time", "NUM_EP", "L1", "L2", "BATCH_SIZE", "MEM_SIZE",
-								"MIN_EXP_SIZE","season", "run", "Job_ID", "seed", "case", "best", "idx", "rewards", "discomfort", "penalty"]);
+								"MIN_EXP_SIZE","season", "run", "Job_ID", "seed", "case", "best", "idx", "rewards", "discomfort", "penalty", "filename"]);
 
 	# # Cost tracker
 	# Costs = Matrix(CSV.read("out/Costs_$(run).csv", DataFrame, header=true))

@@ -11,6 +11,10 @@ using Distributions: Uniform
 using Random
 using DataFrames, CSV
 
+#include("/home/RDC/ullnerle/server_repo/ma-thesis-drl-in-hem/RL-SHEMS/input.jl")
+Job_ID = ENV["JOB_ID"]
+DISCOMFORT_WEIGHT_EV = 5 + 5 * (parse(Int, Job_ID) % 10)
+
 import Reinforce: reset!, action, finished, step!, state
 
 export
@@ -46,7 +50,7 @@ pv = PV(0.95f0);
 b = Battery(0.98f0, 0f0, 10f0, 4.6f0, 0.00003f0);
 ev = ElectricVehicle(0f0, 48.249f0, 11f0);   #TBC: soc_max should be defined outside of the env somehow!! delete whats not needed. Only rate_max needed?
 # Market(price, discomfort_weight)
-m = Market(0.3f0, 1f0)		# Adjust here the penalty for not charging the full amount
+m = Market(0.3f0, DISCOMFORT_WEIGHT_EV) #10f0)		# Adjust here the penalty for not charging the full amount
 
 mutable struct ShemsState{T<:AbstractFloat} <: AbstractVector{T}
   Soc_b::T
@@ -173,6 +177,14 @@ function reset_state!(env::Shems; rng=0)
     else #training/inference mean random
 		env.state.Soc_b = rand(MersenneTwister(rng), Uniform(b.soc_min, b.soc_max))
 		idx = rand(MersenneTwister(rng), 1:(nrow(df) - env.maxsteps))
+		idx_adj = 0
+
+		# if training set ends on idx with EV connected, draw again
+		while df[idx+env.maxsteps, :h_countdown] > -1
+			idx_adj += 1
+			idx = rand(MersenneTwister(rng+idx_adj), 1:(nrow(df) - env.maxsteps))
+		end
+
 	end
 
 	
@@ -248,7 +260,7 @@ function action(env::Shems, track=-1)
     
 	############################# Electric Vehicle ###############################
     # No smart charging here  (...?)
-    EV = min(ev.rate_max, (1 - Soc_ev))
+    EV = min(ev.rate_max, (1 - Soc_ev) * (ev.soc_max - ev.soc_min) )
 
 	############################# Battery ###############################
 	# charge battery when PV is available (substracting electr. demand)
@@ -373,10 +385,10 @@ function step!(env::Shems, s, a; track=0)
 
 	if c_ev == 0 && Soc_ev < 1  # 0: end of a transaction, EV is being disconnected
 		# not charged to potential (full, or what could have been)
-		disccomfort = 1 - Soc_ev
+		discomfort = (1 - Soc_ev) * m.discomfort_weight_ev
 		EX_EV = (1 - Soc_ev) * (ev.soc_max - ev.soc_min) # kWh that was not charged into the EV and needs to be charged elsewhere
 		env.state.Soc_ev = 1 # Electric Vehicle is disconnected and its soc is set to 1 for the duration of being disconnected.
-	elseif c_ev < 0 && Soc_ev < 1
+	elseif c_ev < 0 && EV_target < 0.99
 		penalty = 1 - EV_target
 	end
 
@@ -385,13 +397,14 @@ function step!(env::Shems, s, a; track=0)
 	env.step += 1
 	env.idx += 1
 
+
 	################### DETERMINE REWARD ############################
 
 	b_degr = 0 #- 0.01 * (abs(B) > 0.01)   # abort penalty when discomfort abort
 	abort = - 0 * finished(env, env.state)  # abort penalty when discomfort abort
 
 	env.reward =  (m.sell_discount * p_buy * (PV_GR + B_GR)) - (p_buy * (GR_DE + GR_B + GR_EV + EX_EV)) -
-						m.discomfort_weight_ev * discomfort -
+						discomfort -
 						penalty + # I could add a penalty weight here, like for discomfort
 						b_degr +
 						abort
