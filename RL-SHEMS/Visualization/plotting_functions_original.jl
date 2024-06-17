@@ -1,9 +1,9 @@
-function read_data(season; tariff="fix", job_id = "1063970", case="$(season)_L2_nns_abort-0", network="Opt", stop="final", NUM_EP = 3001, run="eval", seed=1)
+function read_data(season; tariff="fix", job_id = "1063970", charger_ID = "Charger06", case="$(season)_L2_nns_abort-0", network="Opt", stop="final", NUM_EP = 3001, run="eval", seed=1)
     
     version = "v12"
     NUM_STEPS = 24
     
-    Input_df = CSV.read("../data/$(season)_$(run)_$(tariff).csv", DataFrame);
+    Input_df = CSV.read("../data/$(charger_ID)_$(season)_$(run)_$(tariff).csv", DataFrame);
     
     L1 = 300
     L2 = 600  
@@ -20,8 +20,13 @@ function read_data(season; tariff="fix", job_id = "1063970", case="$(season)_L2_
        return Data_df
     end
 
-    Flow_df=CSV.read("../out/tracker/$(job_id)_$(run)_results_$(version)_$(NUM_STEPS)_$(NUM_EP)_"*
-                        "$(L1)_$(L2)_$(case)_123$(seed)_$(NUM_EP).csv",DataFrame);
+    #Flow_df=CSV.read("../out/tracker/$(job_id)_$(run)_results_$(version)_$(NUM_STEPS)_$(NUM_EP)_"*
+    #                    "$(L1)_$(L2)_$(case)_123$(seed)_$(NUM_EP).csv",DataFrame);
+
+    Flow_df=CSV.read("../out/tracker/$(Job_ID)_$(run)_results_charger_v1_$(NUME_STEPS)_"*
+                        "$(NUM_EP)_$(L1)_$(L2)_$(case)_123$(seed)_$(NUM_EP).csv", DataFrame);
+
+
     #println(size(Flow_df),  size(Input_df))
     Data_df = hcat(Flow_df[1:end, :], Input_df[1:end-1, :]) # cut index + hour + last input (no action)
     return Data_df

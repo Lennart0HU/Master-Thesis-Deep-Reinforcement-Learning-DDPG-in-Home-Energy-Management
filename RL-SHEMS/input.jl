@@ -33,7 +33,7 @@ gr()
 Job_ID = ENV["JOB_ID"]
 Task_ID = ENV["TASK_ID"]
 seed_run = parse(Int, Task_ID)
-num_seeds = 2
+num_seeds = 10 # always make sure this matches the highest Task_ID in the bash scheduler!
 
 Charger_ID = "Charger06"
 
@@ -52,13 +52,13 @@ noise_type = "gn" # "ou", "pn", "gn", "en"
 include("RL_environments/envs/shems_LU1.jl")
 using .ShemsEnv_LU1: Shems
 
-DISCOMFORT_WEIGHT_EV = 5 + 5 * (parse(Int, Job_ID) % 10)
+DISCOMFORT_WEIGHT_EV = 1 + (parse(Int, Job_ID) % 10)
 
 TRAIN_EP_LENGTH = 72 # 24 + 24 * (parse(Int, Job_ID) % 10)
 
 case = "$(Charger_ID)_$(season)_$(algo)_$(price)_gn.1_restr-train_disc$(DISCOMFORT_WEIGHT_EV)"
 run = "eval" # "test", "eval"
-NUM_EP = 10001 #50_000
+NUM_EP = 1001 #50_000
 L1 = 300 #256
 L2 = 600 #256
 idx=NUM_EP
@@ -102,7 +102,7 @@ WAIT = Dict(
           ("summer", "DDPG") => 150, ("summer", "TD3") => 1500, ("summer", "SAC") => 5000,
           ("winter", "DDPG") => 200, ("winter", "TD3") => 2000, ("winter", "SAC") => 7000,
           ("both", "DDPG") => 300,   ("both", "TD3") => 3000,  ("both", "SAC") => 10000,
-          ("all", "DDPG") => 1200,    ("all", "TD3") => 5000,   ("all", "SAC") => 20_000) 
+          ("all", "DDPG") => 300,    ("all", "TD3") => 5000,   ("all", "SAC") => 20_000) 
           #("summer", "DDPG") => 1500, ("summer", "TD3") => 1500, ("summer", "SAC") => 5000,  #LU: original code
           #("winter", "DDPG") => 2000, ("winter", "TD3") => 2000, ("winter", "SAC") => 7000,
           #("both", "DDPG") => 3000,   ("both", "TD3") => 3000,  ("both", "SAC") => 10000,

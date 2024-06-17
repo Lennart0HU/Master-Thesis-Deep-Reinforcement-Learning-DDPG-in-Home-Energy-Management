@@ -65,7 +65,7 @@ end
 function bar_target_EV(Data_df, start, yaxis, title)
     # SOCs
     @df Data_df[start:start+23,:] groupedbar(
-        100 .*((:Soc_ev), xticks=0:6:24, yticks=0:25:100, tickfontsize=10, ylim=(0,100),
+        100 .*(:Soc_ev), xticks=0:6:24, yticks=0:25:100, tickfontsize=10, ylim=(0,100),
         colour =[:firebrick],
         label=["Soc_ev"], legend=false, legendfontsize=8, title="$(title)", titlefontsize=11,
         titlelocation=:left, linewidth= 0, alpha=0.5, bottom_margin=4Plots.mm);

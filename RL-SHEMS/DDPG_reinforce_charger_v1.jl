@@ -1,12 +1,10 @@
 # scheduler run set up:
-
-println("Use bash scheduler.")
 gpu_id = parse(Int, ENV["GPU_ID"])	
 include("input.jl") # include("input.jl")
 using CUDA
 CUDA.device!(gpu_id)
-printGPU = CUDA.device()
-println("Starting script with JOB_ID: $(ENV["JOB_ID"]), TASK_ID: $(ENV["TASK_ID"]) on GPU: $(printGPU)!")
+parse(Int, ENV["TASK_ID"]) == 1 && println("Using bash scheduler.")
+println("Starting script with JOB_ID: $(ENV["JOB_ID"]), TASK_ID: $(ENV["TASK_ID"]) on GPU: $(CUDA.device())!")
 
 #=
 # single run set up (also change in input.jl!):
@@ -56,20 +54,22 @@ if plot_result == true
 			$(mean(total_reward[end-round(Int, length(total_reward)/20):end]))")
 	println("eval (last $(round(Int, size(score_mean)[1]/10)+1))=
 			$(mean(score_mean[end-round(Int, size(score_mean)[1]/10):end,1]))")
-	plot_scores(ymin = -10_000, rng=rng_run)   #ymin = -4
+	plot_scores(ymin = -100, rng=rng_run)   #ymin = -4
 end
 
 if plot_all == true
 	if seed_run == num_seeds
 		# delay to be sure all runs are done
+		println("STARTING: $(WAIT[season, algo]) second WAIT.")
 		sleep(WAIT[season, algo]) 
+		println("WAITING DONE")
 
   		score_mean_all = zeros(Float32, (ceil(Int32, NUM_EP/test_every), num_seeds)) |> cpu
 		for i in 1:num_seeds
 			test_rng_run = parse(Int, string(seed_ini)*string(i))
 			score_mean_all[:,i] = loadBSON(scores_only=true, rng=test_rng_run)[2] |> cpu
 		end
-		plot_all_scores(ymin = -20_000, score_mean=score_mean_all) #ymin = -10,  # ymin = -50
+		plot_all_scores(ymin = -100, score_mean=score_mean_all) #ymin = -10,  # ymin = -50
 	end
 end
 
@@ -91,6 +91,7 @@ if track == 1 # track last and best training run
 			inference(env_dict[run]; render=false, track=track, idx=best_eval, rng_inf=test_rng_run, best=true)
 			write_to_tracker_file(idx=best_eval, rng=test_rng_run, best=true)
 		end
+		println("Evaluation for TASK_IDs of $Job_ID is finished.")
 	end
 
 elseif track < 0 #rule-based

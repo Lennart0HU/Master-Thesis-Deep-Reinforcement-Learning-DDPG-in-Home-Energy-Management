@@ -188,7 +188,7 @@ function episode!(env::Shems; NUM_STEPS=EP_LENGTH["train"], train=true, render=f
   local reward_eps=0f0
   local noise_eps=0f0
   local last_step = 1
-  local results = Array{Float64}(undef, 0, 22)
+  local results = Array{Float64}(undef, 0, 23)
 
 
   step = 1
@@ -240,9 +240,6 @@ function episode!(env::Shems; NUM_STEPS=EP_LENGTH["train"], train=true, render=f
 
     end
 
-
-
-
 	step += 1
   end
 
@@ -266,8 +263,8 @@ function run_episodes(env_train::Shems, env_eval::Shems, total_reward, score_mea
 		# Train set
 		total_reward[i], last_step, noise_mean[i] = episode!(env_train, train=true, render=render,
 													track=track, rng_ep=rng_ep)
-		print("Episode: $(@sprintf "%4i" i) | Mean Score: $(@sprintf "%9.4f" total_reward[i]) "*
-				"| # steps: $(@sprintf "%2i" last_step) | Noise: $(@sprintf "%7.3f" noise_mean[i]) | ")
+		#print("Episode: $(@sprintf "%4i" i) | Mean Score: $(@sprintf "%9.4f" total_reward[i]) "*
+		#		"| # steps: $(@sprintf "%2i" last_step) | Noise: $(@sprintf "%7.3f" noise_mean[i]) | ")
 
 		# try adjusting the oberservation normalization values
 		#s_min_new, s_max_new = min_max_buffer(MIN_EXP_SIZE, rng_mm=rng_run) |> gpu
@@ -276,6 +273,10 @@ function run_episodes(env_train::Shems, env_eval::Shems, total_reward, score_mea
 
 		# test on eval data set
 		if i % test_every == 1
+
+			print("Episode: $(@sprintf "%4i" i) | Mean Score: $(@sprintf "%9.4f" total_reward[i]) "*
+					"| # steps: $(@sprintf "%2i" last_step) | Noise: $(@sprintf "%7.3f" noise_mean[i]) | ")
+
 			idx = ceil(Int32, i/test_every)
 			# Evaluation set, test over whole set
 			for test_ep in 1:test_runs
@@ -296,9 +297,11 @@ function run_episodes(env_train::Shems, env_eval::Shems, total_reward, score_mea
 				# save best run
 				global best_run = i
 			end
+			t_elap = round(now()-t_start, Dates.Minute)  # added
+			println("Time elapsed: $(t_elap)") # added
 		end
-		t_elap = round(now()-t_start, Dates.Minute)
-		println("Time elapsed: $(t_elap)")
+		#t_elap = round(now()-t_start, Dates.Minute)
+		#println("Time elapsed: $(t_elap)")
 	end
 	return nothing
 end
