@@ -1,11 +1,11 @@
 #!/bin/bash
 
-for ((JOB_ID=1706240601; JOB_ID<=1706240609; JOB_ID++ ))
+for ((JOB_ID=1806240600; JOB_ID<=1806240600; JOB_ID++ ))
 do
     export JOB_ID
     cp input.jl out/input/$JOB_ID--input.jl
 
-    for (( TASK_ID=1; TASK_ID<=10; TASK_ID++ ))
+    for (( TASK_ID=1; TASK_ID<=1; TASK_ID++ ))
     do
         GPU_ID=1 #$((TASK_ID % 2)) # temporary change, since gpu 0 is at capacity
 

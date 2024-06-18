@@ -44,10 +44,10 @@ struct Market
 end
 
 # PV(eta)
-pv = PV(0.95f0);
+pv = PV(1f0); # PV(0.95f0);
 
 # Battery(eta, soc_min, soc_max, rate_max, loss)
-b = Battery(0.98f0, 0f0, 10f0, 4.6f0, 0.00003f0);
+b = Battery(0.95f0, 0f0, 10f0, 4.6f0, 0.00003f0); # Battery(0.98f0, 0f0, 10f0, 4.6f0, 0.00003f0);
 ev = ElectricVehicle(0f0, 48.249f0, 11f0);   #TBC: soc_max should be defined outside of the env somehow!! delete whats not needed. Only rate_max needed?
 # Market(price, discomfort_weight)
 m = Market(0.3f0, DISCOMFORT_WEIGHT_EV) #10f0)		# Adjust here the penalty for not charging the full amount
@@ -286,7 +286,7 @@ function step!(env::Shems, s, a; track=0)
 	if track >= 0
 		B_target, EV_target = a  # soc targets are taken from the actors actions
 		B, EV = action(env, ShemsAction(B_target, EV_target))  # actual charge amounts determined
-		env.a = ShemsAction(B_target, EV_target)   # why do we need this line here?
+		env.a = ShemsAction(B_target, EV_target) 
 	elseif track < 0
 		B_target, EV_target = zeros(Float32,2)
 		B, EV = a

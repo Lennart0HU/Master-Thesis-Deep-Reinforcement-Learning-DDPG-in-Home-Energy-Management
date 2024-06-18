@@ -203,7 +203,7 @@ function write_to_tracker_file(;idx=NUM_EP, rng=rng_run, best=false)
 		results = CSV.read(file_name, DataFrame)
 	else
 		file_name = "out/tracker/$(Job_ID)_$(run)_results_$(case)_rule_$(idx).csv"
-		results = CSV.read(filename, DataFrame)
+		results = CSV.read(file_name, DataFrame)
 	end
 	# Overall tracker (rewards without discomfort costs)
 	Tracker = CSV.read("out/Tracker_Charger.csv", DataFrame, header=true);

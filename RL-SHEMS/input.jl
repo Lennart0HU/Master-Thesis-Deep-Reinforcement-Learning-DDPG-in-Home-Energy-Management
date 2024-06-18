@@ -28,21 +28,21 @@ gr()
 #Job_ID = ENV["JOB_ID"]
 #Task_ID = ENV["SGE_TASK_ID"] #LU: original for SGE cluster approach
 #seed_run = parse(Int, Task_ID)
-#--------bash scheduler jobs------------
 
+#--------bash scheduler jobs------------
 Job_ID = ENV["JOB_ID"]
 Task_ID = ENV["TASK_ID"]
 seed_run = parse(Int, Task_ID)
-num_seeds = 10 # always make sure this matches the highest Task_ID in the bash scheduler!
+num_seeds = 1 # always make sure this matches the highest Task_ID in the bash scheduler!
 
 Charger_ID = "Charger06"
 
 #-------------------------------- INPUTS --------------------------------------------
-train = 1 # 0 1
-plot_result = 1 #0 1
-plot_all = 1 #0 1
+train = 0 # 0 1
+plot_result = 0 #0 1
+plot_all = 0 #0 1
 render = 0 #0 1
-track = 1 #-0.7  # 0 - off, 1 - DRL, , rule-based percentage of start Soc e.g. 70% -> -0.7 (has to be negative)
+track = -0.7 #-0.7  # 0 - off, 1 - DRL, , rule-based percentage of start Soc e.g. 70% -> -0.7 (has to be negative)
 
 season = "all" # "all" "both" "summer" "winter"
 
@@ -56,7 +56,7 @@ DISCOMFORT_WEIGHT_EV = 1 + (parse(Int, Job_ID) % 10)
 
 TRAIN_EP_LENGTH = 72 # 24 + 24 * (parse(Int, Job_ID) % 10)
 
-case = "$(Charger_ID)_$(season)_$(algo)_$(price)_gn.1_restr-train_disc$(DISCOMFORT_WEIGHT_EV)"
+case = "(Charger_ID)_$(season)_$(price)_rule_based_$(track)" #"$(Charger_ID)_$(season)_$(algo)_$(price)_gn.1_restr-train_disc$(DISCOMFORT_WEIGHT_EV)"
 run = "eval" # "test", "eval"
 NUM_EP = 1001 #50_000
 L1 = 300 #256
