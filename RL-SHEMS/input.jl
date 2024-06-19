@@ -33,16 +33,16 @@ gr()
 Job_ID = ENV["JOB_ID"]
 Task_ID = ENV["TASK_ID"]
 seed_run = parse(Int, Task_ID)
-num_seeds = 1 # always make sure this matches the highest Task_ID in the bash scheduler!
+num_seeds = 10 # always make sure this matches the highest Task_ID in the bash scheduler!
 
-Charger_ID = "Charger06"
+Charger_ID = "Charger0$((parse(Int, Job_ID) ÷ 100) % 100)"
 
 #-------------------------------- INPUTS --------------------------------------------
-train = 0 # 0 1
-plot_result = 0 #0 1
-plot_all = 0 #0 1
+train = 1 # 0 1
+plot_result = 1 #0 1
+plot_all = 1 #0 1
 render = 0 #0 1
-track = -0.7 #-0.7  # 0 - off, 1 - DRL, , rule-based percentage of start Soc e.g. 70% -> -0.7 (has to be negative)
+track = 1 #-0.7  # 0 - off, 1 - DRL, , rule-based percentage of start Soc e.g. 70% -> -0.7 (has to be negative)
 
 season = "all" # "all" "both" "summer" "winter"
 
@@ -52,13 +52,14 @@ noise_type = "gn" # "ou", "pn", "gn", "en"
 include("RL_environments/envs/shems_LU1.jl")
 using .ShemsEnv_LU1: Shems
 
-DISCOMFORT_WEIGHT_EV = 1 + (parse(Int, Job_ID) % 10)
+DISCOMFORT_WEIGHT_EV = 1 #1 + (parse(Int, Job_ID) % 10)
 
 TRAIN_EP_LENGTH = 72 # 24 + 24 * (parse(Int, Job_ID) % 10)
 
-case = "(Charger_ID)_$(season)_$(price)_rule_based_$(track)" #"$(Charger_ID)_$(season)_$(algo)_$(price)_gn.1_restr-train_disc$(DISCOMFORT_WEIGHT_EV)"
+case = "$(Charger_ID)_$(season)_$(algo)_$(price)_gn.1_restr-train_disc$(DISCOMFORT_WEIGHT_EV)" # "(Charger_ID)_$(season)_$(price)_rule_based_$(track)"
 run = "eval" # "test", "eval"
-NUM_EP = 1001 #50_000
+NUM_EP = 1_000 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10)) + 1 #1_001 #3_001 #50_000
+WAIT_SEC = 60 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10)) 
 L1 = 300 #256
 L2 = 600 #256
 idx=NUM_EP
@@ -83,6 +84,9 @@ MIN_EXP_SIZE = 24_000 #24_000
 memory = CircularBuffer{Any}(MEM_SIZE)
 
 #--------------------------------- Game environment ---------------------------
+
+
+
 EP_LENGTH = Dict("train" => TRAIN_EP_LENGTH,
 					("summer", "eval") => 359, ("summer", "test") => 767,
 					("winter", "eval") => 359, ("winter", "test") => 719,
@@ -102,7 +106,7 @@ WAIT = Dict(
           ("summer", "DDPG") => 150, ("summer", "TD3") => 1500, ("summer", "SAC") => 5000,
           ("winter", "DDPG") => 200, ("winter", "TD3") => 2000, ("winter", "SAC") => 7000,
           ("both", "DDPG") => 300,   ("both", "TD3") => 3000,  ("both", "SAC") => 10000,
-          ("all", "DDPG") => 300,    ("all", "TD3") => 5000,   ("all", "SAC") => 20_000) 
+          ("all", "DDPG") => WAIT_SEC,    ("all", "TD3") => 5000,   ("all", "SAC") => 20_000) 
           #("summer", "DDPG") => 1500, ("summer", "TD3") => 1500, ("summer", "SAC") => 5000,  #LU: original code
           #("winter", "DDPG") => 2000, ("winter", "TD3") => 2000, ("winter", "SAC") => 7000,
           #("both", "DDPG") => 3000,   ("both", "TD3") => 3000,  ("both", "SAC") => 10000,

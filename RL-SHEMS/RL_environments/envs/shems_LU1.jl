@@ -12,8 +12,22 @@ using Random
 using DataFrames, CSV
 
 #include("/home/RDC/ullnerle/server_repo/ma-thesis-drl-in-hem/RL-SHEMS/input.jl")
+#-------------- EXTERNAL VARIABLES--------
 Job_ID = ENV["JOB_ID"]
-DISCOMFORT_WEIGHT_EV = 1 + (parse(Int, Job_ID) % 10)
+DISCOMFORT_WEIGHT_EV = 1 #1 + (parse(Int, Job_ID) % 10) # last digid from the Job_ID
+charger_id = ((parse(Int, Job_ID) ÷ 100) % 100) # third and fourth last digid form JOB_ID
+ev_capacities = Dict{Int, Float64}(
+    1 => 48250f0,
+    2 => 36271f0,
+    3 => 45508f0,
+    4 => 78993f0,
+    5 => 37207f0,
+    6 => 35816f0,
+    7 => 36521f0,
+    8 => 45728f0,
+    9 => 21935f0
+)
+
 
 import Reinforce: reset!, action, finished, step!, state
 
@@ -44,11 +58,11 @@ struct Market
 end
 
 # PV(eta)
-pv = PV(1f0); # PV(0.95f0);
+pv = PV(1f0); # PV(0.95f0); # 
 
 # Battery(eta, soc_min, soc_max, rate_max, loss)
 b = Battery(0.95f0, 0f0, 10f0, 4.6f0, 0.00003f0); # Battery(0.98f0, 0f0, 10f0, 4.6f0, 0.00003f0);
-ev = ElectricVehicle(0f0, 48.249f0, 11f0);   #TBC: soc_max should be defined outside of the env somehow!! delete whats not needed. Only rate_max needed?
+ev = ElectricVehicle(0f0, ev_capacities[charger_id], 11f0);   #TBC: soc_max should be defined outside of the env somehow!! delete whats not needed. Only rate_max needed?
 # Market(price, discomfort_weight)
 m = Market(0.3f0, DISCOMFORT_WEIGHT_EV) #10f0)		# Adjust here the penalty for not charging the full amount
 

@@ -1,15 +1,16 @@
+include("input.jl") # include("input.jl")
+
 # scheduler run set up:
 gpu_id = parse(Int, ENV["GPU_ID"])	
-include("input.jl") # include("input.jl")
 using CUDA
 CUDA.device!(gpu_id)
 parse(Int, ENV["TASK_ID"]) == 1 && println("Using bash scheduler.")
-println("Starting script with JOB_ID: $(ENV["JOB_ID"]), TASK_ID: $(ENV["TASK_ID"]) on GPU: $(CUDA.device())!")
+println("Starting script with JOB_ID: $(ENV["JOB_ID"]), TASK_ID: $(ENV["TASK_ID"]) for charger $(Charger_ID) on GPU: $(CUDA.device())!")
 
 #=
 # single run set up (also change in input.jl!):
 println("Use single run setup.")
-include("input.jl") # contains the input data
+CUDA.device!(0) # 0 1
 =#
 
 include("algorithms/$(algo).jl") # contains all training functions
@@ -91,7 +92,7 @@ if track == 1 # track last and best training run
 			inference(env_dict[run]; render=false, track=track, idx=best_eval, rng_inf=test_rng_run, best=true)
 			write_to_tracker_file(idx=best_eval, rng=test_rng_run, best=true)
 		end
-		println("Evaluation for TASK_IDs of $Job_ID is finished.")
+		println("Evaluation/Testing for TASK_IDs of $Job_ID is finished.")
 	end
 
 elseif track < 0 #rule-based
@@ -99,4 +100,4 @@ elseif track < 0 #rule-based
 	write_to_tracker_file(idx=track, rng=track)
 end
 
-println("Script with JOB_ID: $(Task_ID) & TASK_ID: $(Job_ID) is done!")
+println("Script with JOB_ID: $(Job_ID) & TASK_ID: $(Task_ID) is done!")
