@@ -6,17 +6,18 @@ do
     export JOB_ID
     cp input.jl out/input/$JOB_ID--input.jl
     ((gpu_idx++))
-    GPU_ID=$((gpu_idx % 2))
+    GPU_ID=1 #$((gpu_idx % 2)) # manually if a gpu is too busy
  
     for (( TASK_ID=1; TASK_ID<=10; TASK_ID++ ))
     do
         TASK_ID=$TASK_ID GPU_ID=$GPU_ID julia DDPG_reinforce_charger_v1.jl &
     done
- 
-    if [ $GPU_ID -eq 1 ]
-    then
-        wait
-    fi
+    
+    wait
+    #if [ $GPU_ID -eq 1 ]
+    #then
+    #    wait
+    #fi
  
 done
  
