@@ -29,7 +29,7 @@ score_mean = zeros(ceil(Int32, NUM_EP/test_every))
 # ------------------------- train ---------------------------------------
 if train == true
 	t_start = now()
-	print("Max steps: $(EP_LENGTH["train"]), Max episodes: $(NUM_EP), Layer 1: $(L1) nodes, Layer 2: $(L2) nodes, ")
+	println("Max steps: $(EP_LENGTH["train"]), Max episodes: $(NUM_EP), Layer 1: $(L1) nodes, Layer 2: $(L2) nodes, ")
 	println("Case: $(case), Run: $(rng_run), Time to start: $(round(t_start - start_time, Dates.Minute))")
 	run_episodes(env_dict["train"], env_dict["eval"], total_reward, score_mean, best_run, noise_mean,
 					test_every, render,  rng_run, track=0)
@@ -78,6 +78,7 @@ end
 # ------------------------- track evaluation ---------------------------------------
 if track == 1 # track last and best training run
 	if seed_run == num_seeds
+		println("Evaluation/Testing for TASK_IDs of $Job_ID.")
 		for i in 1:num_seeds	
 			test_rng_run = parse(Int, string(seed_ini)*string(i))
 			# track last episode weights

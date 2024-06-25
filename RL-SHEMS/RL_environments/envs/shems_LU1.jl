@@ -17,16 +17,16 @@ Job_ID = ENV["JOB_ID"]
 DISCOMFORT_WEIGHT_EV = 1 #1 + (parse(Int, Job_ID) % 10) # last digid from the Job_ID
 charger_id = ((parse(Int, Job_ID) ÷ 100) % 100) # third and fourth last digid form JOB_ID
 ev_capacities = Dict{Int, Float64}(
-    1 => 48250f0,
-    2 => 36271f0,
-    3 => 45508f0,
-    4 => 78993f0,
-    5 => 37207f0,
-    6 => 35816f0,
-    7 => 36521f0,
-    8 => 45728f0,
-    9 => 21935f0
-)
+    1 => 48.250f0, # cap 7.5f0 * 0.9, rate 3.3
+    2 => 36.271f0, # cap 10f0 * 0.9, 3.3
+    3 => 45.508f0, # cap 10f0 * 0.9, 3.3
+    4 => 78.993f0, # cap 11f0 * 0.9, 4.6
+    5 => 37.207f0, # cap 10f0 * 0.9, 4.6
+    6 => 35.816f0, # cap 15f0 * 0.9, 4.6
+    7 => 36.521f0, # cap 12f0 * 0.9, 3.3
+    8 => 45.728f0, # cap 10f0 * 0.9, 3.3
+    9 => 21.935f0 # cap 7.5f0 * 0.9, 3.3
+) # TBC HERE i might have to add further settings for the battery and charger (capacities and rates for each charger_ID)
 
 
 import Reinforce: reset!, action, finished, step!, state
@@ -191,13 +191,14 @@ function reset_state!(env::Shems; rng=0)
     else #training/inference mean random
 		env.state.Soc_b = rand(MersenneTwister(rng), Uniform(b.soc_min, b.soc_max))
 		idx = rand(MersenneTwister(rng), 1:(nrow(df) - env.maxsteps))
-		idx_adj = 0
+		
+		soc_ev_end = df[(idx + env.maxsteps), :h_countdown]
+		while soc_ev_end > -1 && idx < (nrow(df) - env.maxsteps)
+			println("reset_state problem. idx: $(idx), maxsteps: $(env.maxsteps), c_ev at $(idx+env.maxsteps) : $(df[(idx + env.maxsteps), :h_countdown]).")
+			idx += (soc_ev_end + 1)
+			soc_ev_end = df[(idx + env.maxsteps), :h_countdown]
+			println("new idx: $idx, new c_ev_end = $c_ev_end.")
 
-		# if training set ends on idx with EV connected, draw again
-		while df[idx+env.maxsteps, :h_countdown] > -1
-			idx_adj += 1
-			idx = rand(MersenneTwister(rng+idx_adj), 1:(nrow(df) - env.maxsteps))
-		end
 
 	end
 
@@ -215,7 +216,7 @@ function reset_state!(env::Shems; rng=0)
 	return idx
 end
 
-function next_state!(env::Shems)	# determining endogenous states for the next step # TBC: somehow the Soc_ev needs to be endogenously loaded when ev arrives.
+function next_state!(env::Shems)	# determining endogenous states for the next step
 	df = CSV.read(env.path, DataFrame)
 	idx = env.idx + 1
 
@@ -307,7 +308,7 @@ function step!(env::Shems, s, a; track=0)
 		env.a = ShemsAction(B_target, EV_target)
 	end
 
-  	pv_, BD, BC, EVC, abort, discomfort = zeros(6)
+  	pv_, BD, BC, EVC, abort, discomfort, cost, penalty = zeros(8)
 	PV_DE, PV_B, PV_EV, PV_GR, B_DE, B_EV, B_GR, GR_DE, GR_EV, GR_B, EX_EV = zeros(11)
 
 	############# DETERMINE FLOWS ###################################
@@ -388,10 +389,6 @@ function step!(env::Shems, s, a; track=0)
 	# Electric Vehicle
 	env.state.Soc_ev = Soc_ev + (PV_EV + B_EV + GR_EV) / (ev.soc_max - ev.soc_min) # new Soc_ev in %
 
-	#TBC: where do I add the comfort violation of battery not beign full?
-	#TBC: do I need to force set Soc_ev to 1 somehow, when c_ev = 0? or =-1?
-	#TBC: Or can I manage the action for EV_target, with comfort violations alone? 
-	# TBC: EG if c_ev = 0, comfort violation = (1 - EV_target)
 
 	discomfort = 0
 	penalty = 0
@@ -405,6 +402,8 @@ function step!(env::Shems, s, a; track=0)
 	elseif c_ev < 0 && EV_target < 0.99
 		penalty = 1 - EV_target
 	end
+
+	penalty = 0 # testing runs without penalty!
 
 	# Set uncertain parts of next state
 	next_state!(env)

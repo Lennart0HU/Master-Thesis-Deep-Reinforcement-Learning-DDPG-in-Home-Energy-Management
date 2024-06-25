@@ -38,9 +38,9 @@ num_seeds = 10 # always make sure this matches the highest Task_ID in the bash s
 Charger_ID = "Charger0$((parse(Int, Job_ID) ÷ 100) % 100)"
 
 #-------------------------------- INPUTS --------------------------------------------
-train = 1 # 0 1
-plot_result = 1 #0 1
-plot_all = 1 #0 1
+train = 0 # 0 1
+plot_result = 0 #0 1
+plot_all = 0 #0 1
 render = 0 #0 1
 track = 1 #-0.7  # 0 - off, 1 - DRL, , rule-based percentage of start Soc e.g. 70% -> -0.7 (has to be negative)
 
@@ -53,13 +53,12 @@ include("RL_environments/envs/shems_LU1.jl")
 using .ShemsEnv_LU1: Shems
 
 DISCOMFORT_WEIGHT_EV = 1 #1 + (parse(Int, Job_ID) % 10)
+TRAIN_EP_LENGTH = 72 # 24 * (1 + (parse(Int, Job_ID) % 10)^2 ) # 24 # 72
 
-TRAIN_EP_LENGTH = 72 # 24 + 24 * (parse(Int, Job_ID) % 10)
-
-case = "$(Charger_ID)_$(season)_$(algo)_$(price)_gn.1_restr-train_disc$(DISCOMFORT_WEIGHT_EV)" # "(Charger_ID)_$(season)_$(price)_rule_based_$(track)"
-run = "eval" # "test", "eval"
-NUM_EP = 1_000 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10)) + 1 #1_001 #3_001 #50_000
-WAIT_SEC = 60 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10)) 
+case = "$(Charger_ID)_$(season)_$(algo)_$(price)_gn.1_discw$(DISCOMFORT_WEIGHT_EV)_penalty0" # "(Charger_ID)_$(season)_$(price)_rule_based_$(track)"
+run = "test" # "test", "eval"
+NUM_EP = 2_001 # 1_000 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10)) + 1 #1_001 #3_001 #50_000
+WAIT_SEC = 120 # 60 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10)) 
 L1 = 300 #256
 L2 = 600 #256
 idx=NUM_EP
@@ -77,8 +76,8 @@ current_episode = 0
 
 #--------------------------------- Memory ------------------------------------
 BATCH_SIZE = 120 #100 # Yu: 120
-MEM_SIZE = 24_000 #24_000
-MIN_EXP_SIZE = 24_000 #24_000
+MEM_SIZE = 10_000 # 2_000 * (1 + 1 * (parse(Int, Job_ID) % 10)^2) # 24_000 #24_000
+MIN_EXP_SIZE = 10_000 # 2_000 * (1 + 1 * (parse(Int, Job_ID) % 10)^2) # 24_000 #24_000
 
 ########################################################################################
 memory = CircularBuffer{Any}(MEM_SIZE)
