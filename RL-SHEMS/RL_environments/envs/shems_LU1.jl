@@ -25,7 +25,8 @@ ev_capacities = Dict{Int, Float64}(
     6 => 35.816f0, # cap 15f0 * 0.9, 4.6
     7 => 36.521f0, # cap 12f0 * 0.9, 3.3
     8 => 45.728f0, # cap 10f0 * 0.9, 3.3
-    9 => 21.935f0 # cap 7.5f0 * 0.9, 3.3
+    9 => 21.935f0, # cap 7.5f0 * 0.9, 3.3
+	99 => 35.816f0
 ) # TBC HERE i might have to add further settings for the battery and charger (capacities and rates for each charger_ID)
 
 
@@ -191,14 +192,30 @@ function reset_state!(env::Shems; rng=0)
     else #training/inference mean random
 		env.state.Soc_b = rand(MersenneTwister(rng), Uniform(b.soc_min, b.soc_max))
 		idx = rand(MersenneTwister(rng), 1:(nrow(df) - env.maxsteps))
-		
-		soc_ev_end = df[(idx + env.maxsteps), :h_countdown]
-		while soc_ev_end > -1 && idx < (nrow(df) - env.maxsteps)
-			println("reset_state problem. idx: $(idx), maxsteps: $(env.maxsteps), c_ev at $(idx+env.maxsteps) : $(df[(idx + env.maxsteps), :h_countdown]).")
-			idx += (soc_ev_end + 1)
-			soc_ev_end = df[(idx + env.maxsteps), :h_countdown]
-			println("new idx: $idx, new c_ev_end = $c_ev_end.")
 
+		c_ev_end = df[(idx + env.maxsteps), :h_countdown]
+		counter = 0
+		max_iterations = 100  # Set your limit here
+
+		while c_ev_end > -1 && idx < (nrow(df) - env.maxsteps)
+			#println("reset_state problem. idx: $(idx), maxsteps: $(env.maxsteps), c_ev at $(idx+env.maxsteps) : $c_ev_end.")
+			idx += Int(c_ev_end + 1)
+
+			# If idx out of bound, draw new idx.
+			if idx > (nrow(df) - env.maxsteps) 
+				idx = rand(MersenneTwister(rng), 1:(nrow(df) - env.maxsteps))
+			end
+
+			#println("new index: $idx")
+			c_ev_end = df[(idx + env.maxsteps), :h_countdown]
+			#println("new idx: $idx, new c_ev_end = $c_ev_end.")
+			
+			counter += 1
+			if counter > max_iterations
+				println("Loop has exceeded maximum iterations, while trying to extend Training Episode in reset_state. Breaking...")
+				break
+			end
+		end
 
 	end
 
@@ -244,7 +261,7 @@ function action(env::Shems, a::ShemsAction)
         
 		############################# Electric Vehicle ###############################
 		# charge EV to max if SOC_ev less than EV_target%
-		if Soc_ev < EV_target
+		if c_ev > -1 && Soc_ev < EV_target
 			# Fill EV up to target, or iwth max charge rate
 			EV = min(ev.rate_max, (EV_target - Soc_ev) * (ev.soc_max - ev.soc_min))
 		else
@@ -394,7 +411,7 @@ function step!(env::Shems, s, a; track=0)
 	penalty = 0
 	EX_EV = 0
 
-	if c_ev == 0 && Soc_ev < 1  # 0: end of a transaction, EV is being disconnected
+	if c_ev < 0 && Soc_ev < 1  # <0: disconnect/end of a transaction
 		# not charged to potential (full, or what could have been)
 		discomfort = (1 - Soc_ev) * 100
 		EX_EV = (1 - Soc_ev) * (ev.soc_max - ev.soc_min) # kWh that was not charged into the EV and needs to be charged elsewhere
@@ -403,7 +420,7 @@ function step!(env::Shems, s, a; track=0)
 		penalty = 1 - EV_target
 	end
 
-	penalty = 0 # testing runs without penalty!
+	#penalty = 0 # testing runs without penalty!
 
 	# Set uncertain parts of next state
 	next_state!(env)
@@ -418,7 +435,11 @@ function step!(env::Shems, s, a; track=0)
 
 	cost = (m.sell_discount * p_buy * (PV_GR + B_GR)) - (p_buy * (GR_DE + GR_B + GR_EV + EX_EV))
 
-	env.reward =  cost - discomfort * m.discomfort_weight_ev - penalty #+ b_degr + abort
+	if track < 0
+		env.reward =  cost - discomfort * m.discomfort_weight_ev #+ b_degr + abort
+	else
+		env.reward =  cost - discomfort * m.discomfort_weight_ev - penalty #+ b_degr + abort
+	end
 
 	#results = hcat(Soc_b, Soc_ev, env.reward, comfort, b_degr+abort, PV_DE, B_DE, GR_DE,
 	#				PV_B, PV_GR, PV_EV, B_EV, GR_EV, EX_EV, GR_B, B_GR, env.idx, B, B_target,

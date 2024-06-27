@@ -33,14 +33,14 @@ gr()
 Job_ID = ENV["JOB_ID"]
 Task_ID = ENV["TASK_ID"]
 seed_run = parse(Int, Task_ID)
-num_seeds = 10 # always make sure this matches the highest Task_ID in the bash scheduler!
+num_seeds = 10  # always make sure this matches the highest Task_ID in the bash scheduler!
 
-Charger_ID = "Charger0$((parse(Int, Job_ID) ÷ 100) % 100)"
+Charger_ID = "Charger" * lpad((parse(Int, Job_ID) ÷ 100) % 100, 2, '0')
 
 #-------------------------------- INPUTS --------------------------------------------
-train = 0 # 0 1
-plot_result = 0 #0 1
-plot_all = 0 #0 1
+train = 1 # 0 1
+plot_result = 1 #0 1
+plot_all = 1 #0 1
 render = 0 #0 1
 track = 1 #-0.7  # 0 - off, 1 - DRL, , rule-based percentage of start Soc e.g. 70% -> -0.7 (has to be negative)
 
@@ -55,9 +55,14 @@ using .ShemsEnv_LU1: Shems
 DISCOMFORT_WEIGHT_EV = 1 #1 + (parse(Int, Job_ID) % 10)
 TRAIN_EP_LENGTH = 72 # 24 * (1 + (parse(Int, Job_ID) % 10)^2 ) # 24 # 72
 
-case = "$(Charger_ID)_$(season)_$(algo)_$(price)_gn.1_discw$(DISCOMFORT_WEIGHT_EV)_penalty0" # "(Charger_ID)_$(season)_$(price)_rule_based_$(track)"
-run = "test" # "test", "eval"
-NUM_EP = 2_001 # 1_000 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10)) + 1 #1_001 #3_001 #50_000
+if track < 0
+  case = "$(Charger_ID)_$(season)_$(price)_rule_based_$(track)"
+else
+  case = "$(Charger_ID)_$(season)_$(algo)_$(price)_gn.1_discw$(DISCOMFORT_WEIGHT_EV)_penalty1_smart-trainEP"
+end
+
+run = "eval" # "test", "eval"
+NUM_EP = 3_001 # 1_000 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10)) + 1 #1_001 #3_001 #50_000
 WAIT_SEC = 120 # 60 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10)) 
 L1 = 300 #256
 L2 = 600 #256
@@ -76,8 +81,8 @@ current_episode = 0
 
 #--------------------------------- Memory ------------------------------------
 BATCH_SIZE = 120 #100 # Yu: 120
-MEM_SIZE = 10_000 # 2_000 * (1 + 1 * (parse(Int, Job_ID) % 10)^2) # 24_000 #24_000
-MIN_EXP_SIZE = 10_000 # 2_000 * (1 + 1 * (parse(Int, Job_ID) % 10)^2) # 24_000 #24_000
+MEM_SIZE = 15_000 # 2_000 * (1 + 1 * (parse(Int, Job_ID) % 10)^2) # 24_000 #24_000
+MIN_EXP_SIZE = 15_000 # 2_000 * (1 + 1 * (parse(Int, Job_ID) % 10)^2) # 24_000 #24_000
 
 ########################################################################################
 memory = CircularBuffer{Any}(MEM_SIZE)
@@ -94,7 +99,7 @@ EP_LENGTH = Dict("train" => TRAIN_EP_LENGTH,
 					("all", "eval") => 1439,   ("all", "test") => 2999) # length of whole evaluation set (different)
 
 
-CSV.read("data/$(Charger_ID)_$(season)_train_$(price).csv", DataFrame)
+#CSV.read("data/$(Charger_ID)_$(season)_train_$(price).csv", DataFrame)
 
 env_dict = Dict("train" => Shems(EP_LENGTH["train"], "data/$(Charger_ID)_$(season)_train_$(price).csv"),
 				"eval" => Shems(EP_LENGTH[season, "eval"], "data/$(Charger_ID)_$(season)_eval_$(price).csv"),
