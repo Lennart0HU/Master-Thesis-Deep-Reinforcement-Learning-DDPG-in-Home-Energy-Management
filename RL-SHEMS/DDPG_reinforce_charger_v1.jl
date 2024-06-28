@@ -6,7 +6,8 @@ using CUDA
 CUDA.device!(gpu_id)
 parse(Int, ENV["TASK_ID"]) == 1 && println("Using bash scheduler.")
 println("Starting script with JOB_ID: $(ENV["JOB_ID"]), TASK_ID: $(ENV["TASK_ID"]) for charger $(Charger_ID) on GPU: $(CUDA.device())!")
-
+println("DISCOMFORT_WEIGHT_EV: $DISCOMFORT_WEIGHT_EV | TRAIN_EP_LENGTH: $TRAIN_EP_LENGTH | NUM_EP: $NUM_EP | BATCH_SIZE: $BATCH_SIZE")
+println("MEM_SIZE: $MEM_SIZE | noise_type: $noise_type | L1: $L1 | L2: $L2")
 #=
 # single run set up (also change in input.jl!):
 println("Use single run setup.")

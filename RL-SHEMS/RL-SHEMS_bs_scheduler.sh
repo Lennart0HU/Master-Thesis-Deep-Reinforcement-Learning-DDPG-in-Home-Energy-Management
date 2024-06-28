@@ -1,29 +1,31 @@
 #!/bin/bash
 
 gpu_idx=0
-JOB_ID=10119900
+JOB_ID=10129801
 
-while ((JOB_ID <= 10119900))
+while ((JOB_ID <= 10129812))
 do
     export JOB_ID
     cp input.jl out/input/$JOB_ID--input.jl
     ((gpu_idx++))
-    GPU_ID=0 #$((gpu_idx % 2)) # manually if a gpu is too busy
+    GPU_ID=$((gpu_idx % 2)) # manually if a gpu is too busy
  
     for (( TASK_ID=1; TASK_ID<=10; TASK_ID++ ))
     do
+        #((gpu_idx++))
+        #GPU_ID=$((gpu_idx % 2)) # manually if a gpu is too busy
         TASK_ID=$TASK_ID GPU_ID=$GPU_ID julia DDPG_reinforce_charger_v1.jl &
     done
     
-    #sleep 30
+    sleep 20
 
     #wait
-    #if [ $GPU_ID -eq 0 ]
-    #then
-    #    wait
-    #fi
+    if [ $GPU_ID -eq 0 ]
+    then
+        wait
+    fi
 
-    JOB_ID=$((JOB_ID + 100))
+    JOB_ID=$((JOB_ID + 1))
 done
  
 wait

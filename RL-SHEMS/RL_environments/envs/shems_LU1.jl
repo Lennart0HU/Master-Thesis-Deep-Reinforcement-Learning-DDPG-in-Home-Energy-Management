@@ -14,7 +14,21 @@ using DataFrames, CSV
 #include("/home/RDC/ullnerle/server_repo/ma-thesis-drl-in-hem/RL-SHEMS/input.jl")
 #-------------- EXTERNAL VARIABLES--------
 Job_ID = ENV["JOB_ID"]
-DISCOMFORT_WEIGHT_EV = 1 #1 + (parse(Int, Job_ID) % 10) # last digid from the Job_ID
+
+if parse(Int, Job_ID[end-1:end]) == 1
+	DISCOMFORT_WEIGHT_EV = 10
+else
+	DISCOMFORT_WEIGHT_EV = 1
+end
+
+if parse(Int, Job_ID[end-1:end]) == 12
+	penalty_weight = 1
+else
+	penalty_weight = 0
+end
+
+#1 + (parse(Int, Job_ID) % 10) # last digid from the Job_ID
+
 charger_id = ((parse(Int, Job_ID) ÷ 100) % 100) # third and fourth last digid form JOB_ID
 ev_capacities = Dict{Int, Float64}(
     1 => 48.250f0, # cap 7.5f0 * 0.9, rate 3.3
@@ -26,7 +40,8 @@ ev_capacities = Dict{Int, Float64}(
     7 => 36.521f0, # cap 12f0 * 0.9, 3.3
     8 => 45.728f0, # cap 10f0 * 0.9, 3.3
     9 => 21.935f0, # cap 7.5f0 * 0.9, 3.3
-	99 => 35.816f0
+	99 => 35.816f0,
+	98 => 35.816f0
 ) # TBC HERE i might have to add further settings for the battery and charger (capacities and rates for each charger_ID)
 
 
@@ -325,7 +340,7 @@ function step!(env::Shems, s, a; track=0)
 		env.a = ShemsAction(B_target, EV_target)
 	end
 
-  	pv_, BD, BC, EVC, abort, discomfort, cost, penalty = zeros(8)
+  	pv_, BD, BC, EVC, abort, discomfort, profit, penalty = zeros(8)
 	PV_DE, PV_B, PV_EV, PV_GR, B_DE, B_EV, B_GR, GR_DE, GR_EV, GR_B, EX_EV = zeros(11)
 
 	############# DETERMINE FLOWS ###################################
@@ -411,13 +426,13 @@ function step!(env::Shems, s, a; track=0)
 	penalty = 0
 	EX_EV = 0
 
-	if c_ev < 0 && Soc_ev < 1  # <0: disconnect/end of a transaction
+	if c_ev == 0 && Soc_ev < 1  # <0: disconnect/end of a transaction
 		# not charged to potential (full, or what could have been)
 		discomfort = (1 - Soc_ev) * 100
 		EX_EV = (1 - Soc_ev) * (ev.soc_max - ev.soc_min) # kWh that was not charged into the EV and needs to be charged elsewhere
 		env.state.Soc_ev = 1 # Electric Vehicle is disconnected and its soc is set to 1 for the duration of being disconnected.
 	elseif c_ev < 0 && EV_target < 0.99
-		penalty = 1 - EV_target
+		penalty = (1 - EV_target) * penalty_weight
 	end
 
 	#penalty = 0 # testing runs without penalty!
@@ -433,18 +448,18 @@ function step!(env::Shems, s, a; track=0)
 	b_degr = 0 #- 0.01 * (abs(B) > 0.01)   # abort penalty when discomfort abort
 	abort = - 0 * finished(env, env.state)  # abort penalty when discomfort abort
 
-	cost = (m.sell_discount * p_buy * (PV_GR + B_GR)) - (p_buy * (GR_DE + GR_B + GR_EV + EX_EV))
+	profit = (m.sell_discount * p_buy * (PV_GR + B_GR)) - (p_buy * (GR_DE + GR_B + GR_EV + EX_EV))
 
 	if track < 0
-		env.reward =  cost - discomfort * m.discomfort_weight_ev #+ b_degr + abort
+		env.reward =  profit - discomfort * m.discomfort_weight_ev #+ b_degr + abort
 	else
-		env.reward =  cost - discomfort * m.discomfort_weight_ev - penalty #+ b_degr + abort
+		env.reward =  profit - discomfort * m.discomfort_weight_ev - penalty #+ b_degr + abort
 	end
 
 	#results = hcat(Soc_b, Soc_ev, env.reward, comfort, b_degr+abort, PV_DE, B_DE, GR_DE,
 	#				PV_B, PV_GR, PV_EV, B_EV, GR_EV, EX_EV, GR_B, B_GR, env.idx, B, B_target,
 	#				EV, EV_target)
-	results = hcat(env.idx, c_ev, EV_target, EV, Soc_ev, env.reward, cost, discomfort, penalty, PV_DE, B_DE, GR_DE,
+	results = hcat(env.idx, c_ev, EV_target, EV, Soc_ev, env.reward, profit, discomfort, penalty, PV_DE, B_DE, GR_DE,
 					PV_B, PV_GR, PV_EV, B_EV, GR_EV, EX_EV, GR_B, B_GR, B, B_target, Soc_b
 					)
 

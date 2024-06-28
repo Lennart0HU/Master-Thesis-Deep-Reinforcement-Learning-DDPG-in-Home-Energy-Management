@@ -94,7 +94,7 @@ function plot_scores(;ymin=Inf, total_reward=total_reward, score_mean=score_mean
 	# plot training results
 	scatter(1:NUM_EP, [total_reward], label="train",
 			markershape=:circle, markersize=2, markerstrokewidth=0.1,
-			legend=:bottomright, ylim=(ymin, 1.5), colour = :turquoise,
+			legend=:bottomright, ylim=(ymin, 50), colour = :turquoise,
 			left_margin=7Plots.mm, bottom_margin=6Plots.mm);
 	# plot training moving average
 	plot!(1:NUM_EP, [mean(total_reward[max(1, i-50):i]) for i in 1:length(total_reward)],
@@ -129,7 +129,7 @@ function plot_all_scores(;ymin=Inf, score_mean=score_mean)
 
 	# plot test/evaluation results mean -last
 	plot(1:test_every:NUM_EP, [all_score_mean], label="$(run) (mean)",
-			markersize=2, markerstrokewidth=0.1, ylim=(ymin, 0.5),
+			markersize=2, markerstrokewidth=0.1, ylim=(ymin, 50),
 			legend=:bottomright, markershape=:circle, colour =:indigo,
 			left_margin=7Plots.mm, bottom_margin=6Plots.mm);
 
@@ -170,7 +170,7 @@ function write_to_results_file(results; idx=NUM_EP, rng=seed_run, best=false)
 		CSV.write("out/tracker/$(Job_ID)_$(run)_results_charger_v1_$(EP_LENGTH["train"])_"*
 		"$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_best.csv",
 			DataFrame(results, :auto), header=["index", "c_ev", "EV_target",
-			"EV", "Soc_ev", "rewards", "cost", "discomfort", "penalty", "PV_DE", "B_DE", "GR_DE", "PV_B", "PV_GR", 
+			"EV", "Soc_ev", "rewards", "profit", "discomfort", "penalty", "PV_DE", "B_DE", "GR_DE", "PV_B", "PV_GR", 
 			"PV_EV", "B_EV", "GR_EV", "EX_EV", "GR_B", "B_GR", "B", "B_tar", "Soc_b"]);
 
 
@@ -178,12 +178,12 @@ function write_to_results_file(results; idx=NUM_EP, rng=seed_run, best=false)
     CSV.write("out/tracker/$(Job_ID)_$(run)_results_charger_v1_$(EP_LENGTH["train"])_"*
 				"$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_$(idx).csv",
 					DataFrame(results, :auto), header=["index", "c_ev", "EV_target",
-					"EV", "Soc_ev", "rewards", "cost", "discomfort", "penalty", "PV_DE", "B_DE", "GR_DE", "PV_B", "PV_GR", 
+					"EV", "Soc_ev", "rewards", "profit", "discomfort", "penalty", "PV_DE", "B_DE", "GR_DE", "PV_B", "PV_GR", 
 					"PV_EV", "B_EV", "GR_EV", "EX_EV", "GR_B", "B_GR", "B", "B_tar", "Soc_b"]);
 	elseif idx < 0
 	CSV.write("out/tracker/$(Job_ID)_$(run)_results_$(case)_rule_$(idx).csv",
 				DataFrame(results, :auto), header=["index", "c_ev", "EV_target",
-				"EV", "Soc_ev", "rewards", "cost", "discomfort", "penalty", "PV_DE", "B_DE", "GR_DE", "PV_B", "PV_GR", 
+				"EV", "Soc_ev", "rewards", "profit", "discomfort", "penalty", "PV_DE", "B_DE", "GR_DE", "PV_B", "PV_GR", 
 				"PV_EV", "B_EV", "GR_EV", "EX_EV", "GR_B", "B_GR", "B", "B_tar", "Soc_b"]);
 	end
     return nothing
@@ -207,10 +207,10 @@ function write_to_tracker_file(;idx=NUM_EP, rng=rng_run, best=false)
 	end
 	# Overall tracker (rewards without discomfort costs)
 	Tracker = CSV.read("out/Tracker_Charger.csv", DataFrame, header=true);
-	Tracker = vcat(Matrix(Tracker), [time NUM_EP L1 L2 BATCH_SIZE MEM_SIZE MIN_EXP_SIZE season run Job_ID rng case best idx sum(results[!, :rewards]) sum(results[!, :cost]) sum(results[!, :discomfort]) sum(results[!, :penalty]) file_name ]);
+	Tracker = vcat(Matrix(Tracker), [time NUM_EP L1 L2 BATCH_SIZE MEM_SIZE MIN_EXP_SIZE season run Job_ID rng case best idx sum(results[!, :rewards]) sum(results[!, :profit]) sum(results[!, :discomfort]) sum(results[!, :penalty]) file_name ]);
 
     CSV.write("out/Tracker_Charger.csv", DataFrame(Tracker,:auto), header=["time", "NUM_EP", "L1", "L2", "BATCH_SIZE", "MEM_SIZE",
-								"MIN_EXP_SIZE","season", "run", "Job_ID", "seed", "case", "best", "idx", "rewards", "cost", "discomfort", "penalty", "filename"]);
+								"MIN_EXP_SIZE","season", "run", "Job_ID", "seed", "case", "best", "idx", "rewards", "profit", "discomfort", "penalty", "filename"]);
 
 	# # Cost tracker
 	# Costs = Matrix(CSV.read("out/Costs_$(run).csv", DataFrame, header=true))

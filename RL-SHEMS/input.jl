@@ -39,21 +39,69 @@ Charger_ID = "Charger" * lpad((parse(Int, Job_ID) ÷ 100) % 100, 2, '0')
 
 #-------------------------------- INPUTS --------------------------------------------
 train = 1 # 0 1
-plot_result = 1 #0 1
+plot_result = 0 #0 1
 plot_all = 1 #0 1
 render = 0 #0 1
 track = 1 #-0.7  # 0 - off, 1 - DRL, , rule-based percentage of start Soc e.g. 70% -> -0.7 (has to be negative)
 
+# Function to parse the last two digits of the JOB_ID and set hyperparameters
+function set_hyperparameters(job_id)
+  # Extract the last two digits of the JOB_ID
+  last_two_digits = parse(Int, job_id[end-1:end])
+
+  # Define the default values for the hyperparameters
+  DISCOMFORT_WEIGHT_EV = 1
+  TRAIN_EP_LENGTH = 120
+  NUM_EP = 1_001
+  BATCH_SIZE = 120
+  MEM_SIZE = 24_000
+  noise_type = "gn"
+  L1 = 300
+  L2 = 600  # Default value for L2
+  penalty = 1
+
+  # Define the alternative values for the hyperparameters
+  alt_values = Dict(
+      1 => (10, :DISCOMFORT_WEIGHT_EV),
+      2 => (48, :TRAIN_EP_LENGTH),
+      3 => (5_001, :NUM_EP),
+      4 => (50, :BATCH_SIZE),
+      5 => (200, :BATCH_SIZE),
+      6 => (50_000, :MEM_SIZE),
+      7 => (10_000, :MEM_SIZE),
+      8 => ("ou", :noise_type),
+      9 => ("pn", :noise_type),
+      10 => ("en", :noise_type),
+      11 => ((256, 256), :L1_L2),
+      12 => (0, :penalty)  # Tuple for L1 and L2
+  )
+
+  # Set the hyperparameter based on the last two digits
+  if last_two_digits in keys(alt_values)
+      value, param = alt_values[last_two_digits]
+      if param == :L1_L2
+          L1, L2 = value  # Unpack the tuple for L1 and L2
+      else
+          eval(Meta.parse("$param = $value"))
+      end
+  end
+
+  return DISCOMFORT_WEIGHT_EV, TRAIN_EP_LENGTH, NUM_EP, BATCH_SIZE, MEM_SIZE, noise_type, L1, L2, penalty
+end
+
+# Set the hyperparameters
+DISCOMFORT_WEIGHT_EV, TRAIN_EP_LENGTH, NUM_EP, BATCH_SIZE, MEM_SIZE, noise_type, L1, L2, penalty = set_hyperparameters(Job_ID)
+
 season = "all" # "all" "both" "summer" "winter"
 
 price= "fix" # "fix", "TOU"
-noise_type = "gn" # "ou", "pn", "gn", "en"
- 
+#noise_type = "gn" # "ou", "pn", "gn", "en"
+
 include("RL_environments/envs/shems_LU1.jl")
 using .ShemsEnv_LU1: Shems
 
-DISCOMFORT_WEIGHT_EV = 1 #1 + (parse(Int, Job_ID) % 10)
-TRAIN_EP_LENGTH = 72 # 24 * (1 + (parse(Int, Job_ID) % 10)^2 ) # 24 # 72
+#DISCOMFORT_WEIGHT_EV = 1 #1 + (parse(Int, Job_ID) % 10)
+#TRAIN_EP_LENGTH = 120 # 24 * (1 + (parse(Int, Job_ID) % 10)^2 ) # 24 # 72
 
 if track < 0
   case = "$(Charger_ID)_$(season)_$(price)_rule_based_$(track)"
@@ -62,10 +110,10 @@ else
 end
 
 run = "eval" # "test", "eval"
-NUM_EP = 3_001 # 1_000 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10)) + 1 #1_001 #3_001 #50_000
-WAIT_SEC = 120 # 60 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10)) 
-L1 = 300 #256
-L2 = 600 #256
+#NUM_EP = 1_001 # 1_000 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10)) + 1 #1_001 #3_001 #50_000
+WAIT_SEC = 300 # 60 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10)) 
+#L1 = 300 #256
+#L2 = 600 #256
 idx=NUM_EP
 test_every = 100
 test_runs = 100
@@ -80,9 +128,9 @@ start_time = now()
 current_episode = 0
 
 #--------------------------------- Memory ------------------------------------
-BATCH_SIZE = 120 #100 # Yu: 120
-MEM_SIZE = 15_000 # 2_000 * (1 + 1 * (parse(Int, Job_ID) % 10)^2) # 24_000 #24_000
-MIN_EXP_SIZE = 15_000 # 2_000 * (1 + 1 * (parse(Int, Job_ID) % 10)^2) # 24_000 #24_000
+#BATCH_SIZE = 120 #100 # Yu: 120
+#MEM_SIZE = 24_000 # 2_000 * (1 + 1 * (parse(Int, Job_ID) % 10)^2) # 24_000 #24_000
+MIN_EXP_SIZE = MEM_SIZE #24_000 # 2_000 * (1 + 1 * (parse(Int, Job_ID) % 10)^2) # 24_000 #24_000
 
 ########################################################################################
 memory = CircularBuffer{Any}(MEM_SIZE)

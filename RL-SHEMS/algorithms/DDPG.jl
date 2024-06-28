@@ -253,7 +253,7 @@ function run_episodes(env_train::Shems, env_eval::Shems, total_reward, score_mea
 		# Train set
 		total_reward[i], last_step, noise_mean[i] = episode!(env_train, train=true, render=render,
 													track=track, rng_ep=rng_ep)
-		#print("Episode: $(@sprintf "%4i" i) | Mean Score: $(@sprintf "%9.4f" total_reward[i]) "*
+		#println("Run: $(rng) | Episode: $(@sprintf "%4i" i) | Mean Score: $(@sprintf "%9.4f" total_reward[i]) "*
 		#		"| # steps: $(@sprintf "%2i" last_step) | Noise: $(@sprintf "%7.3f" noise_mean[i]) | ")
 
 		# try adjusting the oberservation normalization values
@@ -264,7 +264,7 @@ function run_episodes(env_train::Shems, env_eval::Shems, total_reward, score_mea
 		# test on eval data set
 		if i % test_every == 1
 
-			print("Episode: $(@sprintf "%4i" i) | Mean Score: $(@sprintf "%9.4f" total_reward[i]) "*
+			println("Run: $(rng) | Episode: $(@sprintf "%4i" i) | Mean Score: $(@sprintf "%9.4f" total_reward[i]) "*
 					"| # steps: $(@sprintf "%2i" last_step) | Noise: $(@sprintf "%7.3f" noise_mean[i]) | ")
 
 			idx = ceil(Int32, i/test_every)
