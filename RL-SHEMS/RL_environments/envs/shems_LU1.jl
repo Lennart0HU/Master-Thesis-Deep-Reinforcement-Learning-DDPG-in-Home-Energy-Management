@@ -11,21 +11,32 @@ using Distributions: Uniform
 using Random
 using DataFrames, CSV
 
-#include("/home/RDC/ullnerle/server_repo/ma-thesis-drl-in-hem/RL-SHEMS/input.jl")
 #-------------- EXTERNAL VARIABLES--------
 Job_ID = ENV["JOB_ID"]
 
-if parse(Int, Job_ID[end-1:end]) == 1
-	DISCOMFORT_WEIGHT_EV = 10
+#=if parse(Int, Job_ID[end-1:end]) == 1
+	DISCOMFORT_WEIGHT_EV = 1.5
+elseif parse(Int, Job_ID[end-1:end]) == 2
+	DISCOMFORT_WEIGHT_EV = 3
 else
-	DISCOMFORT_WEIGHT_EV = 1
+	DISCOMFORT_WEIGHT_EV = 2
 end
+=#
+DISCOMFORT_WEIGHT_EV = 2
 
-if parse(Int, Job_ID[end-1:end]) == 12
+#=if parse(Int, Job_ID[end-1:end]) == 3
+	penalty_weight = 0.1
+elseif parse(Int, Job_ID[end-1:end]) == 4
 	penalty_weight = 1
 else
-	penalty_weight = 0
-end
+	penalty_weight = 0.5
+end=#
+
+penalty_weight = 0.5
+
+
+#DISCOMFORT_WEIGHT_EV = 1
+#penalty_weight =1
 
 #1 + (parse(Int, Job_ID) % 10) # last digid from the Job_ID
 
@@ -452,6 +463,7 @@ function step!(env::Shems, s, a; track=0)
 
 	if track < 0
 		env.reward =  profit - discomfort * m.discomfort_weight_ev #+ b_degr + abort
+		penalty = 0
 	else
 		env.reward =  profit - discomfort * m.discomfort_weight_ev - penalty #+ b_degr + abort
 	end

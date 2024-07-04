@@ -1,26 +1,34 @@
-include("input.jl") # include("input.jl")
-
-# scheduler run set up:
-gpu_id = parse(Int, ENV["GPU_ID"])	
-using CUDA
-CUDA.device!(gpu_id)
-parse(Int, ENV["TASK_ID"]) == 1 && println("Using bash scheduler.")
-println("Starting script with JOB_ID: $(ENV["JOB_ID"]), TASK_ID: $(ENV["TASK_ID"]) for charger $(Charger_ID) on GPU: $(CUDA.device())!")
-println("DISCOMFORT_WEIGHT_EV: $DISCOMFORT_WEIGHT_EV | TRAIN_EP_LENGTH: $TRAIN_EP_LENGTH | NUM_EP: $NUM_EP | BATCH_SIZE: $BATCH_SIZE")
-println("MEM_SIZE: $MEM_SIZE | noise_type: $noise_type | L1: $L1 | L2: $L2")
+# ------------------------------ Run Set Up --------------------------------------
 #=
 # single run set up (also change in input.jl!):
+include("input.jl")
 println("Use single run setup.")
 CUDA.device!(0) # 0 1
 =#
 
+# scheduler run set up:
+Job_ID = parse(Int, ENV["JOB_ID"])	
+include("out/input/$Job_ID--input.jl")
+gpu_id = parse(Int, ENV["GPU_ID"])	
+using CUDA
+CUDA.device!(gpu_id)
+
+
+parse(Int, ENV["TASK_ID"]) == 1 && println("Using bash scheduler.
+	Max steps: $(EP_LENGTH["train"]) | Max episodes: $(NUM_EP) | Layer 1: $(L1) nodes | Layer 2: $(L2) nodes |
+	Case: $(case)")
+println("Starting script with JOB_ID: $(Job_ID), TASK_ID: $(ENV["TASK_ID"]) for charger $(Charger_ID) on GPU: $(CUDA.device())!")
+
+
+
 include("algorithms/$(algo).jl") # contains all training functions
 include("src/memory_plotting_saving.jl") # contains all ploting and rendering functions
 
-#-------
+#------------------------------- Memory Bugger ---------------------------------
 populate_memory(env_dict["train"], rng=rng_run)
 # initialization for normalization
 s_min, s_max = min_max_buffer(MIN_EXP_SIZE, rng_mm=rng_run) |> gpu
+
 # ------------------------------ Training --------------------------------------
 total_reward = zeros(Float32, NUM_EP)
 noise_mean = zeros(Float32, NUM_EP)
@@ -30,8 +38,7 @@ score_mean = zeros(ceil(Int32, NUM_EP/test_every))
 # ------------------------- train ---------------------------------------
 if train == true
 	t_start = now()
-	println("Max steps: $(EP_LENGTH["train"]), Max episodes: $(NUM_EP), Layer 1: $(L1) nodes, Layer 2: $(L2) nodes, ")
-	println("Case: $(case), Run: $(rng_run), Time to start: $(round(t_start - start_time, Dates.Minute))")
+	println(", Training run: $(rng_run), Time to start: $(round(t_start - start_time, Dates.Minute))")
 	run_episodes(env_dict["train"], env_dict["eval"], total_reward, score_mean, best_run, noise_mean,
 					test_every, render,  rng_run, track=0)
 	# ------------------------- Save results ---------------------------------------

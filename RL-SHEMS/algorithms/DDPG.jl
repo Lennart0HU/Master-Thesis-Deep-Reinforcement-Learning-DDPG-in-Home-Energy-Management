@@ -8,8 +8,8 @@
 using CUDA
 CUDA.allowscalar(false)
 
-
 #----------------------------- Model Architecture -----------------------------
+#=
 γ = 0.99f0     	# discount rate for future rewards 
 
 τ = 1f-3 		# Parameter for soft target network updates Fudji: 5f-3 
@@ -17,13 +17,14 @@ CUDA.allowscalar(false)
 η_crit = 1f-3  	# Learning rate critic
 
 #L2_DECAY = 0.01f0
-
+=#
 init = Flux.glorot_uniform(MersenneTwister(rng_run))
 w_init(dims...) = 6f-3rand(MersenneTwister(rng_run), Float32, dims...) .- 3f-3
 
 # Optimizers
-opt_crit = ADAM(η_crit)
-opt_act = ADAM(η_act)
+#opt_crit = ADAM(η_crit)
+#opt_act = ADAM(η_act)
+
 
 #----------------------------- Model Architecture -----------------------------
 actor = Chain(
@@ -90,7 +91,7 @@ function add_perturb!(rng_rpl)
 
 	Random.seed!(rng_rpl)
 	for p_t in Flux.params(actor_perturb)
-	  p_t .= p_t .+ sample_noise(pn)
+	  p_t .= p_t .+ sample_noise(pn, rng_rpl)
 	end
   end
 
@@ -264,8 +265,8 @@ function run_episodes(env_train::Shems, env_eval::Shems, total_reward, score_mea
 		# test on eval data set
 		if i % test_every == 1
 
-			println("Run: $(rng) | Episode: $(@sprintf "%4i" i) | Mean Score: $(@sprintf "%9.4f" total_reward[i]) "*
-					"| # steps: $(@sprintf "%2i" last_step) | Noise: $(@sprintf "%7.3f" noise_mean[i]) | ")
+			#println("Run: $(rng) | Episode: $(@sprintf "%4i" i) | Mean Score: $(@sprintf "%9.4f" total_reward[i]) "*
+			#		"| # steps: $(@sprintf "%2i" last_step) | Noise: $(@sprintf "%7.3f" noise_mean[i]) | ")
 
 			idx = ceil(Int32, i/test_every)
 			# Evaluation set, test over whole set
@@ -276,7 +277,7 @@ function run_episodes(env_train::Shems, env_eval::Shems, total_reward, score_mea
 				score_all += score
 			end
 			score_mean[idx] = score_all/test_runs
-			print("Eval score $(@sprintf "%7.3f" score_mean[idx]) | ")
+			#print("Eval score $(@sprintf "%7.3f" score_mean[idx]) | ")
 			#save weights for early stopping
 			if score_mean[idx] > best_score
 				# save network weights
@@ -288,7 +289,7 @@ function run_episodes(env_train::Shems, env_eval::Shems, total_reward, score_mea
 				global best_run = i
 			end
 			t_elap = round(now()-t_start, Dates.Minute)  # added
-			println("Time elapsed: $(t_elap)") # added
+			#println("Time elapsed: $(t_elap)") # added
 		end
 		#t_elap = round(now()-t_start, Dates.Minute)
 		#println("Time elapsed: $(t_elap)")

@@ -18,6 +18,8 @@ using Plots
 using CSV, DataFrames
 gr()
 
+
+
 #------------ local machine ----------
 #Job_ID = 1006241 #1149869
 #Task_ID = 1 #1149869-1 #ENV["SGE_TASK_ID"]
@@ -33,111 +35,131 @@ gr()
 Job_ID = ENV["JOB_ID"]
 Task_ID = ENV["TASK_ID"]
 seed_run = parse(Int, Task_ID)
-num_seeds = 10  # always make sure this matches the highest Task_ID in the bash scheduler!
 
 Charger_ID = "Charger" * lpad((parse(Int, Job_ID) ÷ 100) % 100, 2, '0')
 
 #-------------------------------- INPUTS --------------------------------------------
-train = 1 # 0 1
+
+#------------------- Setting -------------------
+train = 1 # 0 1 
 plot_result = 0 #0 1
 plot_all = 1 #0 1
 render = 0 #0 1
 track = 1 #-0.7  # 0 - off, 1 - DRL, , rule-based percentage of start Soc e.g. 70% -> -0.7 (has to be negative)
+run = "eval" # "test", "eval"
+WAIT_SEC = 300 # 60 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10))
+num_seeds = 20  # always make sure this matches the highest Task_ID in the bash scheduler!
 
 # Function to parse the last two digits of the JOB_ID and set hyperparameters
+
+#------------------- Grid search function -------------------
+
 function set_hyperparameters(job_id)
-  # Extract the last two digits of the JOB_ID
+  # Extract the last three digits of the JOB_ID
   last_two_digits = parse(Int, job_id[end-1:end])
 
-  # Define the default values for the hyperparameters
-  DISCOMFORT_WEIGHT_EV = 1
-  TRAIN_EP_LENGTH = 120
-  NUM_EP = 1_001
-  BATCH_SIZE = 120
-  MEM_SIZE = 24_000
-  noise_type = "gn"
-  L1 = 300
-  L2 = 600  # Default value for L2
-  penalty = 1
-
-  # Define the alternative values for the hyperparameters
+  # Define the two alternatives for each hyperparameter
   alt_values = Dict(
-      1 => (10, :DISCOMFORT_WEIGHT_EV),
-      2 => (48, :TRAIN_EP_LENGTH),
-      3 => (5_001, :NUM_EP),
-      4 => (50, :BATCH_SIZE),
-      5 => (200, :BATCH_SIZE),
-      6 => (50_000, :MEM_SIZE),
-      7 => (10_000, :MEM_SIZE),
-      8 => ("ou", :noise_type),
-      9 => ("pn", :noise_type),
-      10 => ("en", :noise_type),
-      11 => ((256, 256), :L1_L2),
-      12 => (0, :penalty)  # Tuple for L1 and L2
+      1 => ((150, 300), (300, 600)), # L1_L2 alternatives
+      2 => (0.999f0, 0.99f0),        # γ (gamma) alternatives
+      3 => (1f-3, 5f-4),              # τ (tau) alternatives
+      #4 => (5f-4, 1f-4),              # η_act (nact) alternatives
+      #5 => (1f-3, 5f-4),              # η_crit (ncrit) alternatives
+      4 => (0.2f0, 0.1f0),            # σ (omega) alternatives
+      5 => (0.15f0, 0.2f0)             # θ (theta) alternatives
   )
 
-  # Set the hyperparameter based on the last two digits
-  if last_two_digits in keys(alt_values)
-      value, param = alt_values[last_two_digits]
-      if param == :L1_L2
-          L1, L2 = value  # Unpack the tuple for L1 and L2
-      else
-          eval(Meta.parse("$param = $value"))
+  # Initialize the params dictionary with the first alternative for each parameter
+  params = Dict(
+      :L1 => alt_values[1][1][1],
+      :L2 => alt_values[1][1][2],
+      :γ => alt_values[2][1],
+      :τ => alt_values[3][1],
+      :η_act => 1f-4, #alt_values[4][1],
+      :η_crit => 1f-3, #alt_values[5][1],
+      :σ => alt_values[4][1],
+      :θ => alt_values[5][1],
+      :DISCOMFORT_WEIGHT_EV => 2, # REMEMBER TO ADJUST THIS IN ENV
+      :penalty => 0.5, # REMEMBER TO ADJUST THIS IN ENV
+      :TRAIN_EP_LENGTH => 72,
+      :NUM_EP => 1_001,
+      :BATCH_SIZE => 200,
+      :MEM_SIZE => 30_000,
+      :noise_type => "ou"
+  )
+
+  # Decode the last three digits into binary representation
+  binary_digits = string(last_two_digits, base=2, pad=5)  # binary for 2 settings of 5 parameters, so 2^5=32 Job_IDs
+
+  # Iterate over each character in the binary string
+  for i in 1:length(binary_digits)
+      digit = parse(Int, binary_digits[i])
+      # If the binary digit is 1, use the second alternative
+      if digit == 1
+          if i == 1
+              params[:L1], params[:L2] = alt_values[i][2]  # Unpack the tuple for L1 and L2
+          else
+            params[[:γ, :τ, :σ, :θ][i-1]] = alt_values[i][2]
+          end
       end
   end
 
-  return DISCOMFORT_WEIGHT_EV, TRAIN_EP_LENGTH, NUM_EP, BATCH_SIZE, MEM_SIZE, noise_type, L1, L2, penalty
+  return params
 end
+
 
 # Set the hyperparameters
-DISCOMFORT_WEIGHT_EV, TRAIN_EP_LENGTH, NUM_EP, BATCH_SIZE, MEM_SIZE, noise_type, L1, L2, penalty = set_hyperparameters(Job_ID)
+params = set_hyperparameters(Job_ID)
+
+# Assign the values to variables
+DISCOMFORT_WEIGHT_EV = params[:DISCOMFORT_WEIGHT_EV]
+TRAIN_EP_LENGTH = params[:TRAIN_EP_LENGTH]
+NUM_EP = params[:NUM_EP]
+BATCH_SIZE = params[:BATCH_SIZE]
+MEM_SIZE = params[:MEM_SIZE]
+noise_type = params[:noise_type]
+L1 = params[:L1]
+L2 = params[:L2]
+penalty = params[:penalty]
+γ = params[:γ]     	# discount rate for future rewards 
+τ = params[:τ] 		# Parameter for soft target network updates Fudji: 5f-3 
+η_act = params[:η_act]   	# Learning rate actor YFudjiu: 1f-3
+η_crit = params[:η_crit]  	# Learning rate critic
+σ = params[:σ]
+θ = params[:θ]
+
+
+
+#------------------- Other paramters -------------------
+
+# Optimizers
+opt_crit = ADAM(η_crit)
+opt_act = ADAM(η_act)
+#L2_DECAY = 0.01f0
 
 season = "all" # "all" "both" "summer" "winter"
-
 price= "fix" # "fix", "TOU"
-#noise_type = "gn" # "ou", "pn", "gn", "en"
-
-include("RL_environments/envs/shems_LU1.jl")
-using .ShemsEnv_LU1: Shems
-
-#DISCOMFORT_WEIGHT_EV = 1 #1 + (parse(Int, Job_ID) % 10)
-#TRAIN_EP_LENGTH = 120 # 24 * (1 + (parse(Int, Job_ID) % 10)^2 ) # 24 # 72
-
-if track < 0
-  case = "$(Charger_ID)_$(season)_$(price)_rule_based_$(track)"
-else
-  case = "$(Charger_ID)_$(season)_$(algo)_$(price)_gn.1_discw$(DISCOMFORT_WEIGHT_EV)_penalty1_smart-trainEP"
-end
-
-run = "eval" # "test", "eval"
-#NUM_EP = 1_001 # 1_000 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10)) + 1 #1_001 #3_001 #50_000
-WAIT_SEC = 300 # 60 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10)) 
-#L1 = 300 #256
-#L2 = 600 #256
 idx=NUM_EP
 test_every = 100
 test_runs = 100
-
-
-#-------------------------------------
 seed_ini = 123
-# individual random seed for each run
 rng_run = parse(Int, string(seed_ini)*string(seed_run))
-
 start_time = now()
 current_episode = 0
-
-#--------------------------------- Memory ------------------------------------
-#BATCH_SIZE = 120 #100 # Yu: 120
-#MEM_SIZE = 24_000 # 2_000 * (1 + 1 * (parse(Int, Job_ID) % 10)^2) # 24_000 #24_000
-MIN_EXP_SIZE = MEM_SIZE #24_000 # 2_000 * (1 + 1 * (parse(Int, Job_ID) % 10)^2) # 24_000 #24_000
-
-########################################################################################
+MIN_EXP_SIZE = MEM_SIZE 
 memory = CircularBuffer{Any}(MEM_SIZE)
+
+# Define case (for network and result storage identification)
+if track < 0
+  case = "$(Charger_ID)_rule_based_$(track)"
+else
+  case = "$(Charger_ID)_disw$(DISCOMFORT_WEIGHT_EV)_pen$(penalty)_BATCH$(BATCH_SIZE)_MEM$(MEM_SIZE)_$(noise_type)-noise_om$(σ)_th$(θ)_Y$(γ)_tao$(τ)_nact$(η_act)_ncrit$(η_crit)_smart-trainEP"
+end
 
 #--------------------------------- Game environment ---------------------------
 
-
+include("../../RL_environments/envs/shems_LU1.jl")
+using .ShemsEnv_LU1: Shems
 
 EP_LENGTH = Dict("train" => TRAIN_EP_LENGTH,
 					("summer", "eval") => 359, ("summer", "test") => 767,
@@ -146,8 +168,6 @@ EP_LENGTH = Dict("train" => TRAIN_EP_LENGTH,
           #("all", "eval") => 100,   ("all", "test") => 200) # length of whole evaluation set (different)
 					("all", "eval") => 1439,   ("all", "test") => 2999) # length of whole evaluation set (different)
 
-
-#CSV.read("data/$(Charger_ID)_$(season)_train_$(price).csv", DataFrame)
 
 env_dict = Dict("train" => Shems(EP_LENGTH["train"], "data/$(Charger_ID)_$(season)_train_$(price).csv"),
 				"eval" => Shems(EP_LENGTH[season, "eval"], "data/$(Charger_ID)_$(season)_eval_$(price).csv"),
@@ -207,8 +227,8 @@ end
 # Ornstein-Uhlenbeck / Gaussian Noise params
 # based on: https://github.com/openai/baselines/blob/master/baselines/ddpg/noise.py
 μ = 0f0 #mu
-σ = 0.1f0 #0.2f0 #sigma
-θ = 0.15f0 #theta
+#σ = 0.1f0 #0.2f0 #sigma
+#θ = 0.15f0 #theta
 dt = 1f-2
 
 # Epsilon Noise parameters based on Yu et al. 2019
