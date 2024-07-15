@@ -190,6 +190,30 @@ function write_to_results_file(results; idx=NUM_EP, rng=seed_run, best=false)
 end
 
 
+function write_to_tracker_file(; idx=NUM_EP, rng=rng_run, best=false)
+    time = now()
+    date = Date(now())
+    if best == true
+        file_name = "out/tracker/$(Job_ID)_$(run)_results_charger_v1_$(EP_LENGTH["train"])_$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_best.csv"
+        results = CSV.read(file_name, DataFrame)
+    elseif idx == NUM_EP
+        file_name = "out/tracker/$(Job_ID)_$(run)_results_charger_v1_$(EP_LENGTH["train"])_$(NUM_EP)_$(L1)_$(L2)_$(case)_$(rng)_$(idx).csv"
+        results = CSV.read(file_name, DataFrame)
+    else
+        file_name = "out/tracker/$(Job_ID)_$(run)_results_$(case)_rule_$(idx).csv"
+        results = CSV.read(file_name, DataFrame)
+    end
+
+    # Overall tracker (rewards without discomfort costs)
+    Tracker = CSV.read("out/Tracker_Charger.csv", DataFrame, header=true)
+    Tracker = vcat(Matrix(Tracker), [time NUM_EP L1 L2 BATCH_SIZE MEM_SIZE MIN_EXP_SIZE season run Job_ID rng case best idx sum(results[!, :rewards]) sum(results[!, :profit]) sum(results[!, :discomfort]) sum(results[!, :penalty]) file_name])
+    CSV.write("out/Tracker_Charger.csv", DataFrame(Tracker, :auto), header=["time", "NUM_EP", "L1", "L2", "BATCH_SIZE", "MEM_SIZE", "MIN_EXP_SIZE", "season", "run", "Job_ID", "seed", "case", "best", "idx", "rewards", "profit", "discomfort", "penalty", "filename"])
+
+end
+
+
+
+#=
 function write_to_tracker_file(;idx=NUM_EP, rng=rng_run, best=false)
 	time=now();
 	date=Date(now());
@@ -234,7 +258,7 @@ function write_to_tracker_file(;idx=NUM_EP, rng=rng_run, best=false)
     # CSV.write("out/Comfort_$(run).csv", DataFrame(Comfort,:auto), header=vcat(["time", "NUM_EP", "L1", "L2", "BATCH_SIZE", "MEM_SIZE",
 	# 							"MIN_EXP_SIZE","season", "run", "Job_ID", "seed", "case", "idx"], string.([i  for i=1:EP_LENGTH[season, run]])));
     return nothing
-end
+end=#
 
 function saveBSON(actor, total_reward, score_mean, best_run, noise_mean;
 					idx=NUM_EP, path="", rng=rng_run)

@@ -3,6 +3,7 @@ gpu_idx=0
 SECONDS=0 # Reset the SECONDS variable at the start of the script
 start_time=$SECONDS
 MIN_MEMORY=30000
+MIN_SYS_MEMORY=80000000 # Minimum system memory in KB (adjust as needed)
 
 # Function to check available GPU memory
 check_gpu_memory() {
@@ -14,7 +15,7 @@ check_gpu_memory() {
     # Check if both GPUs have less than the minimum required memory
     if [ "$available_memory_0" -lt "$MIN_MEMORY" ] && [ "$available_memory_1" -lt "$MIN_MEMORY" ]; then
         echo "Both GPUs have less than $MIN_MEMORY memory available. Waiting for 10 minutes..."
-        sleep 600
+        sleep 300
         check_gpu_memory
     fi
     
@@ -26,29 +27,42 @@ check_gpu_memory() {
     fi
 }
 
-JOB_ID=10219801
+# Function to check available system memory
+check_system_memory() {
+    available_sys_memory=$(awk '/MemAvailable/ {print $2}' /proc/meminfo)
+    
+    if [ "$available_sys_memory" -lt "$MIN_SYS_MEMORY" ]; then
+        echo "System memory is below $MIN_SYS_MEMORY KB. Waiting for 5 minutes..."
+        sleep 300
+        check_system_memory
+    fi
+}
 
-while ((JOB_ID <= 10219832))
+JOB_ID=10230100
+
+
+while ((JOB_ID <= 10230100))
 do
     export JOB_ID
-    cp input.jl out/input/$JOB_ID--input.jl
+    cp input2.jl out/input/$JOB_ID--input.jl
     
-    # Check GPU memory and choose the GPU with more available memory
+    # Check GPU memory and system memory
+    check_system_memory
     check_gpu_memory
-    echo "Avialable memories: GPU0: $available_memory_0, GPU1: $available_memory_1"
 
-    for (( TASK_ID=1; TASK_ID<=20; TASK_ID++ ))
+    for (( TASK_ID=1; TASK_ID<=2; TASK_ID++ ))  # REMEMBER change back in script eval/test 1:NUM_SEED
     do
+        #Check GPU memory and system memory
+        #check_gpu_memory
+        #check_system_memory
+        echo "Available memories: GPU0: $available_memory_0, GPU1: $available_memory_1, System: $available_sys_memory KB"
         TASK_ID=$TASK_ID GPU_ID=$GPU_ID julia DDPG_reinforce_charger_v1.jl &
-        sleep 1
+        #sleep 40
     done
     
-    #if [ $GPU_ID -eq 0 ]
-    #then
-    #    wait
-    #fi
-    sleep 600
-    JOB_ID=$((JOB_ID + 1))
+    #wait
+    #sleep 600
+    JOB_ID=$((JOB_ID + 100))
     end_time=$SECONDS
     elapsed_minutes=$(( (end_time - start_time) / 60 ))
     echo "TIME ELAPSED: $elapsed_minutes minutes"
@@ -59,6 +73,7 @@ wait
 end_time=$SECONDS
 elapsed_minutes=$(( (end_time - start_time) / 60 ))
 echo "ALL JOBS FINISHED. TIME ELAPSED: $elapsed_minutes minutes"
+
 
 
 

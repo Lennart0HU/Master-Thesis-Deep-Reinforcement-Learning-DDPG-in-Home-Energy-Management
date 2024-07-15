@@ -437,10 +437,10 @@ function step!(env::Shems, s, a; track=0)
 	penalty = 0
 	EX_EV = 0
 
-	if c_ev == 0 && Soc_ev < 1  # <0: disconnect/end of a transaction
+	if c_ev == 0 && env.state.Soc_ev < 1  # <0: disconnect/end of a transaction
 		# not charged to potential (full, or what could have been)
-		discomfort = (1 - Soc_ev) * 100
-		EX_EV = (1 - Soc_ev) * (ev.soc_max - ev.soc_min) # kWh that was not charged into the EV and needs to be charged elsewhere
+		discomfort = (1 - env.state.Soc_ev) * 100
+		EX_EV = (1 - env.state.Soc_ev) * (ev.soc_max - ev.soc_min) # kWh that was not charged into the EV and needs to be charged elsewhere
 		env.state.Soc_ev = 1 # Electric Vehicle is disconnected and its soc is set to 1 for the duration of being disconnected.
 	elseif c_ev < 0 && EV_target < 0.99
 		penalty = (1 - EV_target) * penalty_weight
