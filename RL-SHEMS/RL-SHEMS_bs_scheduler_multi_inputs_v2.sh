@@ -40,79 +40,8 @@ check_system_memory() {
 
 
 
-JOB_ID=10320100
 
-while ((JOB_ID <= 10320900))
-do
-    export JOB_ID
-    cp input2.jl out/input/$JOB_ID--input.jl
-    
-    # Check GPU memory and system memory
-    check_system_memory
-    check_gpu_memory
-    echo "Available memories: GPU0: $available_memory_0, GPU1: $available_memory_1, System: $available_sys_memory KB"
-
-    for (( TASK_ID=1; TASK_ID<=10; TASK_ID++ ))  
-    do
-        TASK_ID=$TASK_ID GPU_ID=$GPU_ID julia DDPG_reinforce_charger_v1.jl &
-        sleep 3
-    done
-    
-    wait
-    JOB_ID=$((JOB_ID + 100))
-    end_time=$SECONDS
-    elapsed_minutes=$(( (end_time - start_time) / 60 ))
-    echo "TIME ELAPSED: $elapsed_minutes minutes"
-done
-
-JOB_ID=10329800
-export JOB_ID
-cp input2.jl out/input/$JOB_ID--input.jl
-for (( TASK_ID=1; TASK_ID<=10; TASK_ID++ )) 
-do
-    TASK_ID=$TASK_ID GPU_ID=$GPU_ID julia DDPG_reinforce_charger_v1.jl &
-    sleep 3
-done
-
-wait
-
-
-
-JOB_ID=10330100
-
-while ((JOB_ID <= 10330900))
-do
-    export JOB_ID
-    cp input3.jl out/input/$JOB_ID--input.jl
-
-    for (( TASK_ID=10; TASK_ID<=10; TASK_ID++ ))  
-    do
-        TASK_ID=$TASK_ID GPU_ID=$GPU_ID julia DDPG_reinforce_charger_v1.jl &
-    done
-    
-    wait
-
-    JOB_ID=$((JOB_ID + 100))
-    end_time=$SECONDS
-    elapsed_minutes=$(( (end_time - start_time) / 60 ))
-    echo "TIME ELAPSED: $elapsed_minutes minutes"
-done
-
-JOB_ID=10339800
-export JOB_ID
-cp input3.jl out/input/$JOB_ID--input.jl
-for (( TASK_ID=10; TASK_ID<=10; TASK_ID++ ))  
-do
-    TASK_ID=$TASK_ID GPU_ID=$GPU_ID julia DDPG_reinforce_charger_v1.jl &
-done
-
-wait
-
-
-
-
-
-JOB_ID=10349800
+JOB_ID=10349825
 
 while ((JOB_ID <= 10349827))
 do

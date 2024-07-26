@@ -14,7 +14,7 @@ check_gpu_memory() {
     
     # Check if both GPUs have less than the minimum required memory
     if [ "$available_memory_0" -lt "$MIN_MEMORY" ] && [ "$available_memory_1" -lt "$MIN_MEMORY" ]; then
-        echo "Both GPUs have less than $MIN_MEMORY memory available. Waiting for 10 minutes..."
+        echo "Both GPUs have less than $MIN_MEMORY memory available. Waiting for 5 minutes..."
         sleep 300
         check_gpu_memory
     fi
@@ -40,45 +40,52 @@ check_system_memory() {
 
 #JOB_ID=10219800
 JOB_IDS=(
-    10219810
-    10219803
-    10219811
-    10219831
-    10219818
-    10219826
-    10219825
-    10219812
-    10219814
+    10649802
+    10649806
+    10649814
+    10649815
+    10649807
 )
 
 #while ((JOB_ID <= 10219800))
 #do
 for JOB_ID in "${JOB_IDS[@]}"; do
     export JOB_ID
-    cp input.jl out/input/$JOB_ID--input.jl
-    
-    # Check GPU memory and system memory
-    #check_gpu_memory
+    cp input04.jl out/input/$JOB_ID--input.jl
 
-    for (( TASK_ID=40; TASK_ID<=40; TASK_ID++ ))  # REMEMBER change back in script eval/test 1:NUM_SEED
-    do
-        #Check GPU memory and system memory
-        check_gpu_memory
+    for (( TASK_ID=11; TASK_ID<=40; TASK_ID++ ))  
+    do  
+        # Check GPU memory and system memory
         check_system_memory
+        check_gpu_memory
         echo "Available memories: GPU0: $available_memory_0, GPU1: $available_memory_1, System: $available_sys_memory KB"
-        #echo "Available memories: GPU0: $available_memory_0, GPU1: $available_memory_1, System: $available_sys_memory KB"
         TASK_ID=$TASK_ID GPU_ID=$GPU_ID julia DDPG_reinforce_charger_v1.jl &
-        #sleep 120
+        sleep 30
     done
     
     wait
+
     #sleep 600
-    #JOB_ID=$((JOB_ID + 1))
+    JOB_ID=$((JOB_ID + 10000))
+
+    export JOB_ID
+    cp input05.jl out/input/$JOB_ID--input.jl
+
+    for (( TASK_ID=40; TASK_ID<=40; TASK_ID++ ))  
+    do  
+        check_system_memory
+        check_gpu_memory
+        TASK_ID=$TASK_ID GPU_ID=$GPU_ID julia DDPG_reinforce_charger_v1_test1.jl &
+        #sleep 60
+    done
+
+    wait
+
     end_time=$SECONDS
     elapsed_minutes=$(( (end_time - start_time) / 60 ))
     echo "TIME ELAPSED: $elapsed_minutes minutes"
 done
- 
+
 wait
 
 end_time=$SECONDS

@@ -14,46 +14,44 @@ using DataFrames, CSV
 #-------------- EXTERNAL VARIABLES--------
 Job_ID = ENV["JOB_ID"]
 
-#=if parse(Int, Job_ID[end-1:end]) == 1
-	DISCOMFORT_WEIGHT_EV = 1.5
-elseif parse(Int, Job_ID[end-1:end]) == 2
-	DISCOMFORT_WEIGHT_EV = 3
+#=
+if parse(Int, Job_ID[end-1:end]) == 1f0
+	DISCOMFORT_WEIGHT_EV = 2f0
+	DISC_POT = 1
+elseif parse(Int, Job_ID[end-1:end]) == 2f0
+	DISCOMFORT_WEIGHT_EV = 0.5f0
+	DISC_POT = 2f0
 else
-	DISCOMFORT_WEIGHT_EV = 2
+	DISCOMFORT_WEIGHT_EV = 1f0
+	DISC_POT = 1f0
 end
 =#
-DISCOMFORT_WEIGHT_EV = 2
 
-#=if parse(Int, Job_ID[end-1:end]) == 3
-	penalty_weight = 0.1
-elseif parse(Int, Job_ID[end-1:end]) == 4
-	penalty_weight = 1
-else
-	penalty_weight = 0.5
-end=#
+DISCOMFORT_WEIGHT_EV = 1f0
+DISC_POT = 1f0
 
-penalty_weight = 0.5
+penalty_weight = 0.1f0
 
 
-#DISCOMFORT_WEIGHT_EV = 1
-#penalty_weight =1
+#DISCOMFORT_WEIGHT_EV = 1f0
+#penalty_weight =1f0
 
 #1 + (parse(Int, Job_ID) % 10) # last digid from the Job_ID
 
 charger_id = ((parse(Int, Job_ID) ÷ 100) % 100) # third and fourth last digid form JOB_ID
-ev_capacities = Dict{Int, Float64}(
-    1 => 48.250f0, # cap 7.5f0 * 0.9, rate 3.3
-    2 => 36.271f0, # cap 10f0 * 0.9, 3.3
-    3 => 45.508f0, # cap 10f0 * 0.9, 3.3
-    4 => 78.993f0, # cap 11f0 * 0.9, 4.6
-    5 => 37.207f0, # cap 10f0 * 0.9, 4.6
-    6 => 35.816f0, # cap 15f0 * 0.9, 4.6
-    7 => 36.521f0, # cap 12f0 * 0.9, 3.3
-    8 => 45.728f0, # cap 10f0 * 0.9, 3.3
-    9 => 21.935f0, # cap 7.5f0 * 0.9, 3.3
-	99 => 35.816f0,
-	98 => 35.816f0
-) # TBC HERE i might have to add further settings for the battery and charger (capacities and rates for each charger_ID)
+
+capacities = Dict{Int, Tuple{Float32, Float32, Float64}}(
+    1 => (48.250f0, 7.5f0 * 0.9f0, 3.3),
+    2 => (36.271f0, 10f0 * 0.9f0, 3.3),
+    3 => (45.508f0, 10f0 * 0.9f0, 3.3),
+    4 => (78.993f0, 11f0 * 0.9f0, 4.6),
+    5 => (37.207f0, 10f0 * 0.9f0, 4.6),
+    6 => (35.816f0, 15f0 * 0.9f0, 4.6),
+    7 => (36.521f0, 12f0 * 0.9f0, 3.3),
+    8 => (45.728f0, 10f0 * 0.9f0, 3.3),
+    9 => (21.935f0, 7.5f0 * 0.9f0, 3.3),
+    98 => (35.816f0, 7.5f0 * 0.9f0, 3.3)
+)
 
 
 import Reinforce: reset!, action, finished, step!, state
@@ -82,16 +80,18 @@ end
 struct Market
     sell_discount::Float64
 	discomfort_weight_ev::Float64
+	disc_pot::Float64
 end
 
 # PV(eta)
 pv = PV(1f0); # PV(0.95f0); # 
 
 # Battery(eta, soc_min, soc_max, rate_max, loss)
-b = Battery(0.95f0, 0f0, 10f0, 4.6f0, 0.00003f0); # Battery(0.98f0, 0f0, 10f0, 4.6f0, 0.00003f0);
-ev = ElectricVehicle(0f0, ev_capacities[charger_id], 11f0);   #TBC: soc_max should be defined outside of the env somehow!! delete whats not needed. Only rate_max needed?
+b = Battery(0.95f0, 0f0, capacities[1][2], capacities[1][3], 0.00003f0); # Battery(0.98f0, 0f0, 10f0, 4.6f0, 0.00003f0);
+# ElectricVehicle(soc_min, soc_max, rate_max)
+ev = ElectricVehicle(0f0, capacities[1][1], 11f0);
 # Market(price, discomfort_weight)
-m = Market(0.3f0, DISCOMFORT_WEIGHT_EV) #10f0)		# Adjust here the penalty for not charging the full amount
+m = Market(0.3f0, DISCOMFORT_WEIGHT_EV, DISC_POT) #10f0)		# Adjust here the penalty for not charging the full amount
 
 mutable struct ShemsState{T<:AbstractFloat} <: AbstractVector{T}
   Soc_b::T
@@ -462,10 +462,10 @@ function step!(env::Shems, s, a; track=0)
 	profit = (m.sell_discount * p_buy * (PV_GR + B_GR)) - (p_buy * (GR_DE + GR_B + GR_EV + EX_EV))
 
 	if track < 0
-		env.reward =  profit - discomfort * m.discomfort_weight_ev #+ b_degr + abort
+		env.reward =  profit - (discomfort * m.discomfort_weight_ev) ^ (m.disc_pot) #+ b_degr + abort
 		penalty = 0
 	else
-		env.reward =  profit - discomfort * m.discomfort_weight_ev - penalty #+ b_degr + abort
+		env.reward =  profit - (discomfort * m.discomfort_weight_ev) ^ (m.disc_pot) - penalty #+ b_degr + abort
 	end
 
 	#results = hcat(Soc_b, Soc_ev, env.reward, comfort, b_degr+abort, PV_DE, B_DE, GR_DE,
