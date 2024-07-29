@@ -24,19 +24,24 @@ class Battery:
         self.rate_max = rate_max  # Maximum charging/discharging rate of the battery
         self.loss = loss  # Loss factor of the battery
 
+class EV:
+    def __init__(self, soc_min, soc_max, rate_max):
+        self.soc_min = soc_min
+        self.soc_max = soc_max
+        self.rate_max = rate_max
+
 class SHEMS:
-    def __init__(self, costfactor, p_buy, p_sell, SOC_b, T_fh, V_hw, h_start):
+    def __init__(self, costfactor, p_buy, p_sell, SOC_b, SOC_ev, h_start):
         self.costfactor = costfactor  # Cost factor of the SHEMS
         self.p_buy = p_buy  # Buying price of electricity
         self.p_sell = p_sell  # Selling price of electricity
         self.SOC_b = SOC_b  # State of charge of the battery
-        self.T_fh = T_fh  # Temperature of the thermal storage
-        self.V_hw = V_hw  # Volume of the thermal storage
+        self.SOC_ev = SOC_ev  # 
         self.h_start = h_start  # Start hour of the SHEMS
 
 class Model_SHEMS:
     def __init__(self, h_start, h_end, h_predict, h_control, big, rolling_flag, solver, mip_gap,
-                 output_flag, presolve_flag, season, run, price):
+                 output_flag, presolve_flag, season, run, price, chargerID):
         self.h_start = h_start  # Start hour of the SHEMS model
         self.h_end = h_end  # End hour of the SHEMS model
         self.h_predict = h_predict  # Prediction horizon of the SHEMS model
@@ -50,6 +55,7 @@ class Model_SHEMS:
         self.season = season  # Season of the SHEMS model
         self.run = run  # Run type of the SHEMS model
         self.price = price  # Price type of the SHEMS model
+        self.chargerID = chargerID
         
 H_LENGTH = {
     ("all", "all"): 8760,
@@ -59,7 +65,7 @@ H_LENGTH = {
     ("winter", "test"): 720,
     ("both", "eval"): 720,   
     ("both", "test"): 1488,
-    ("all", "eval"): 1440,   
-    ("all", "test"): 3000
+    ("all", "eval"): 1439,   
+    ("all", "test"): 2999
 }
 

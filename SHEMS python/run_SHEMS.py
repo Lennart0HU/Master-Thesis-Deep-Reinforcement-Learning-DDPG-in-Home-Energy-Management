@@ -3,82 +3,41 @@ import numpy as np
 import pandas as pd
 from SHEMS_optimizer_cost import SHEMS_optimizer
 
-def set_SHEMS_parameters(h_start, h_end, h_predict, h_control, rolling_flag, case=1, costfactor=1.0, outputflag=0,
-                          season="all", run="all", price="fix"):
+
+def set_SHEMS_parameters(h_start, h_end, h_predict, h_control, rolling_flag, case=1, costfactor=10.0, outputflag=0,
+                          season="all", run="all", price="fix", chargerID="Charger01"):
+    
+    capacities = {
+    'Charger01': (48.250, 7.5 * 0.9, 3.3),
+    'Charger02': (36.271, 10 * 0.9, 3.3),
+    'Charger03': (45.508, 10 * 0.9, 3.3),
+    'Charger04': (78.993, 11 * 0.9, 4.6),
+    'Charger05': (37.207, 10 * 0.9, 4.6),
+    'Charger06': (35.816, 15 * 0.9, 4.6),
+    'Charger07': (36.521, 12 * 0.9, 3.3),
+    'Charger08': (45.728, 10 * 0.9, 3.3),
+    'Charger09': (21.935, 7.5 * 0.9, 3.3),
+    'Charger98': (35.816, 7.5 * 0.9, 3.3)
+}
+
+    # Get capacities from dictionary
+    ev_capacity, battery_capacity, battery_power = capacities[chargerID]
+
     # Initialize technical setup
     m = main.Model_SHEMS(h_start, h_end, h_predict, h_control, 60, rolling_flag, "Cbc", 0.05, outputflag, -1,
-                    season, run, price)
-    # PV(eta)
-    pv = main.PV(0.95)
-    # HeatPump(eta, rate_max)
-    hp = main.HeatPump(1.0, 3.0)
+                    season, run, price, chargerID)
 
-    if case == 1:  # base case
-        # Battery(eta, soc_min, soc_max, rate_max, loss)
-        b = main.Battery(0.95, 0.0, 13.5, 3.3, 0.00003)
-        # SHEMS(costfactor, p_buy, p_sell, soc_b, soc_fh, soc_hw, h_start)
-        sh = main.SHEMS(costfactor, 0.3, 0.1, 13.5, 22.0, 180.0, h_start)
-        # ThermalStorage(eta, volume, loss, t_supply, soc_min, soc_max)
-        fh = main.ThermalStorage(1.0, 10.0, 0.045, 30.0, 20.0, 22.0)
-        hw = main.ThermalStorage(1.0, 180.0, 0.035, 45.0, 20.0, 180.0)
-    elif case == 2:  # no battery
-        # set soc_max, rate_max to zero for no battery
-        b = main.Battery(0.95, 0.0, 0.0, 0.0, 0.00003)
-        # soc_b zero for no battery
-        sh = main.SHEMS(costfactor, 0.3, 0.1, 0.0, 22.0, 180.0, h_start)
-        # ThermalStorage(eta, volume, loss, t_supply, soc_min, soc_max)
-        fh = main.ThermalStorage(1.0, 10.0, 0.045, 30.0, 20.0, 22.0)
-        hw = main.ThermalStorage(1.0, 180.0, 0.035, 45.0, 20.0, 180.0)
-    elif case == 3:  # no grid feed-in compensation
-        # Battery(eta, soc_min, soc_max, rate_max, loss)
-        b = main.Battery(0.95, 0.0, 13.5, 3.3, 0.00003)
-        # set p_sell to zero for no feedin tariff
-        sh = main.SHEMS(costfactor, 0.3, 0.0, 13.5, 22.0, 180.0, h_start)
-        # ThermalStorage(eta, volume, loss, t_supply, soc_min, soc_max)
-        fh = main.ThermalStorage(1.0, 10.0, 0.045, 30.0, 20.0, 22.0)
-        hw = main.ThermalStorage(1.0, 180.0, 0.035, 45.0, 20.0, 180.0)
-    elif case == 4:  # no battery and no grid feed-in compensation
-        # Battery(eta, soc_min, soc_max, rate_max, loss)
-        b = main.Battery(0.95, 0.0, 0.0, 0.0, 0.00003)
-        # set p_sell to zero for no feedin tariff
-        sh = main.SHEMS(costfactor, 0.3, 0.0, 0.0, 22.0, 180.0, h_start)
-        # ThermalStorage(eta, volume, loss, t_supply, soc_min, soc_max)
-        fh = main.ThermalStorage(1.0, 10.0, 0.045, 30.0, 20.0, 22.0)
-        hw = main.ThermalStorage(1.0, 180.0, 0.035, 45.0, 20.0, 180.0)
-    elif case == 5:  # RL case study
-        # Battery(eta, soc_min, soc_max, rate_max, loss)
-        b = main.Battery(0.98, 0.0, 10.0, 4.6, 0.00003)
-        # ThermalStorage(eta, volume, loss, t_supply, soc_min, soc_max)
-        fh = main.ThermalStorage(1.0, 10.0, 0.045, 30.0, 19.0, 24.0)
-        hw = main.ThermalStorage(1.0, 200.0, 0.035, 45.0, 20.0, 180.0)
-        # SHEMS(costfactor, p_buy, p_sell, soc_b, soc_fh, soc_hw, h_start)
-        sh = main.SHEMS(costfactor, 0.3, 0.1, 0.5 * (b.soc_min + b.soc_max), 0.5 * (fh.soc_min + fh.soc_max),
-                    0.5 * (hw.soc_min + hw.soc_max), h_start)
+    # Battery(eta, soc_min, soc_max, rate_max, loss)
+    b = main.Battery(0.95, 0.0, battery_capacity, battery_power, 0.00003)
+    ev = main.EV(0.0, ev_capacity, 11.0)
+    # SHEMS(costfactor, p_buy, p_sell, soc_b, soc_ev,  h_start)
+    sh = main.SHEMS(costfactor, 0.4, 0.2*0.4, 0.5 * (b.soc_min + b.soc_max), 1,
+                h_start)
+    print("initialized battery soc_b: ", sh.SOC_b)
 
-    return sh, hp, fh, hw, b, m, pv
+    return sh, ev, b, m
 
 
-def roll_SHEMS(h_start, h_end, h_predict, h_control, case=1, costfactor=1.0, outputflag=0):
-    # Initialize technical setup
-    sh, hp, fh, hw, b, m, pv = set_SHEMS_parameters(h_start, h_end, h_predict, h_control, True, costfactor, case, outputflag)
-
-    # Initial run
-    sh.soc_b, sh.soc_fh, sh.soc_hw, results_new = SHEMS_optimizer(sh, hp, fh, hw, b, m)
-    results = results_new
-    sh.h_start = m.h_start + m.h_control
-
-    # Loop runs for rest of the horizon
-    h = sh.h_start
-    while h <= (m.h_end - m.h_predict):
-        sh.h_start = h
-        sh.soc_b, sh.soc_fh, sh.soc_hw, results_new = SHEMS_optimizer(sh, hp, fh, hw, b, m, pv)
-        results += results_new
-        h += m.h_control
-
-    # Write to results folder
-    write_to_results_file(np.hstack((results, np.ones((results.shape[0], 1)) * m.h_predict)), m, 1, case, costfactor)
-    
-    return None
 
 # def write_to_results_file(results, m, objective=1, case=1, costfactor=1.0):
 #     date = 211116
@@ -94,53 +53,49 @@ def roll_SHEMS(h_start, h_end, h_predict, h_control, case=1, costfactor=1.0, out
 #     return None
 
 
-def write_to_results_file(results, m, objective=1, case=1, costfactor=1.0):
-    date = 211116
-    headers = ["Temp_FH", "Vol_HW", "Soc_B", "V_HW_plus", "V_HW_minus", "T_FH_plus", "T_FH_minus", "profits", "COP_FH",
-               "COP_HW", "PV_DE", "B_DE", "GR_DE", "PV_B", "PV_GR", "PV_HP", "GR_HP", "B_HP", "HP_FH", "HP_HW",
+def write_to_results_file(results, m, objective=1, case=1, costfactor=10.0):
+    date = 260724
+    headers = ["Soc_B", "Soc_Ev", "C_EV", "profits", 'PV_DE', 'B_DE', 'GR_DE', 'PV_B', 'PV_GR', 'PV_EV', 'GR_EV', 'B_EV', 'EXT_EV',
                "month", "day", "hour", "horizon"]
 
     # Convert results to a DataFrame
     df_results = pd.DataFrame(results, columns=headers)
 
     # Add the 'horizon' column to the DataFrame
-    #df_results['horizon'] = m.h_predict
+    df_results['horizon'] = m.h_predict
 
     # Write the DataFrame to a CSV file
     df_results.to_csv(
-        f"single_building/results/{date}_results_{m.h_predict}_{m.h_control}_{m.h_start}-{m.h_end}_{objective}_{case}_{costfactor}_{m.season}_{m.run}_{m.price}.csv",
+        f"single_building/results/{date}_results_{m.h_predict}_{m.h_control}_{m.h_start}-{m.h_end}_{objective}_{case}_{costfactor}_{m.season}_{m.run}_{m.price}_{m.chargerID}.csv",
         index=False)
 
     return None
 
 
-def yearly_SHEMS(h_start=0, objective=1, case=1, costfactor=1.0, outputflag=1,
-                 bc_violations=79, season="all", run="all", price="fix"):
+def yearly_SHEMS(h_start=0, objective=1, case=1, costfactor=10.0, outputflag=1,
+                 season="all", run="all", price="fix", chargerID="Charger01"):
+    print(f"Running SHEMS optimization for case {case}, costfactor {costfactor}, run {run}, chargerID {chargerID}.")
     # Initialize technical setup according to case
-    sh, hp, fh, hw, b, m, pv = set_SHEMS_parameters(
+    sh, ev, b, m = set_SHEMS_parameters(
         h_start, main.H_LENGTH[season, run], (main.H_LENGTH[season, run]-h_start),
         (main.H_LENGTH[season, run]-h_start), False, case, costfactor, outputflag,
-        season=season, run=run, price=price)
+        season=season, run=run, price=price, chargerID=chargerID)
     #print("SHEMS parameters: ", sh, hp, fh, hw, b, m, pv)
 
     # Perform optimization based on the objective
     if objective == 1:  # minimize costs (default)
-        results = SHEMS_optimizer(sh, hp, fh, hw, b, m, pv)
+        results = SHEMS_optimizer(sh, ev, b, m)
     # elif objective == 2:  # maximize self-consumption
     #     results = SHEMS_optimizer_seco(sh, hp, fh, hw, b, m, bc_violations)
     # elif objective == 3:  # maximize self-sufficiency
     #     results = SHEMS_optimizer_sesu(sh, hp, fh, hw, b, m, bc_violations)
     
-    
-    import numpy as np
-    
-    # Convert results to a NumPy array
+        
     results_array = np.array(results)
-    
-    # Use the shape attribute of the NumPy array
     num_rows, num_cols = results_array.shape
-    
-    # Then you can use num_rows to access the number of rows in the array
+    print(f"Optimization for case {case}, costfactor {costfactor}, run {run}, chargerID {chargerID} done!")
+    print(f"Results non array: {results[0][3]}")
+
     write_to_results_file(np.hstack((results_array, np.ones((num_rows, 1)) * m.h_predict)), m, objective, case, costfactor)
 
 
@@ -148,12 +103,25 @@ def yearly_SHEMS(h_start=0, objective=1, case=1, costfactor=1.0, outputflag=1,
     # Write results to a file
     #write_to_results_file(np.hstack((results, np.ones((results.shape[0], 1)) * m.h_predict)), m, objective, case, costfactor)
 
-    return None
+    return results
 
-# %%
 
-yearly_SHEMS(0, 1, 5, 1.0, 1, season="all", run="all", price="fix")
+chargerIDs = ['Charger01', 'Charger02', 'Charger03', 'Charger04', 'Charger05', 'Charger06', 'Charger07', 'Charger08', 'Charger09', 'Charger98']
 
+profits = [('profits', '', 0)]
+
+for chargerID in chargerIDs:
+    results = yearly_SHEMS(0, 1, 5, 10.0, 1, season="all", run="eval", price="fix", chargerID=chargerID)
+    profits.append((chargerID, 'eval', results[0][3]))
+
+    results = yearly_SHEMS(0, 1, 5, 10.0, 1, season="all", run="test", price="fix", chargerID=chargerID)
+    profits.append((chargerID, 'test', results[0][3]))
+
+print(profits)
+df_profits = pd.DataFrame(profits, columns=['ChargerID', 'Run', 'Result'])
+df_profits.to_excel(
+        "single_building/results/profits.xlsx",
+        index=False)
 #=
 # # Calling model runs:
 # yearly_SHEMS(1, 1, 5, 1.0, 1, season="all", run="eval", price="fix")

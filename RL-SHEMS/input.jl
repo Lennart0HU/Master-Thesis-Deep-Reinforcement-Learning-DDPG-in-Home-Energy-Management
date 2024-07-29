@@ -42,14 +42,14 @@ Charger_ID = "Charger" * lpad((parse(Int, Job_ID) ÷ 100) % 100, 2, '0')
 #-------------------------------- INPUTS --------------------------------------------
 
 #------------------- Setting -------------------
-train = 0 # 0 1 
+train = 1 # 0 1 
 plot_result = 0 #0 1
-plot_all = 0 #0 1
+plot_all = 1 #0 1
 render = 0 #0 1
-track = -0.5 #-0.7  # 0 - off, 1 - DRL, , rule-based percentage of start Soc e.g. 70% -> -0.7 (has to be negative)
-run = "test" # "test", "eval"
-WAIT_SEC = 300 # 60 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10))
-num_seeds = 10  # always make sure this matches the highest Task_ID in the bash scheduler!
+track = 1 #-0.7  # 0 - off, 1 - DRL, , rule-based percentage of start Soc e.g. 70% -> -0.7 (has to be negative)
+run = "eval" # "test", "eval"
+WAIT_SEC = 60 # 60 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10))
+num_seeds = 2  # always make sure this matches the highest Task_ID in the bash scheduler!
 
 # Function to parse the last two digits of the JOB_ID and set hyperparameters
 
@@ -79,7 +79,7 @@ function set_hyperparameters(job_id)
       :DISCOMFORT_WEIGHT_EV => 2, # REMEMBER TO ADJUST THIS IN ENV
       :penalty => 0.5, # REMEMBER TO ADJUST THIS IN ENV
       :TRAIN_EP_LENGTH => 72,
-      :NUM_EP => 1_001,
+      :NUM_EP => 1_01,
       :BATCH_SIZE => alt_values[2][1],
       :MEM_SIZE => alt_values[1][1],
       :noise_type => "ou"

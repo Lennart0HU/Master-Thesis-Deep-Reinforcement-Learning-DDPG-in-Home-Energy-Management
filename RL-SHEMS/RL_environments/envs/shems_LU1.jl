@@ -14,23 +14,28 @@ using DataFrames, CSV
 #-------------- EXTERNAL VARIABLES--------
 Job_ID = ENV["JOB_ID"]
 
-#=
+
 if parse(Int, Job_ID[end-1:end]) == 1f0
-	DISCOMFORT_WEIGHT_EV = 2f0
-	DISC_POT = 1
-elseif parse(Int, Job_ID[end-1:end]) == 2f0
-	DISCOMFORT_WEIGHT_EV = 0.5f0
+	DISCOMFORT_WEIGHT_EV = 0.04f0
 	DISC_POT = 2f0
-else
+elseif parse(Int, Job_ID[end-1:end]) == 2f0
 	DISCOMFORT_WEIGHT_EV = 1f0
 	DISC_POT = 1f0
+else
+	DISCOMFORT_WEIGHT_EV = 0.01f0
+	DISC_POT = 2f0
 end
-=#
 
-DISCOMFORT_WEIGHT_EV = 1f0
-DISC_POT = 1f0
+if parse(Int, Job_ID[end-1:end]) == 15
+	penalty_weight = 1f0
+else
+	penalty_weight = 0.1f0
+end
 
-penalty_weight = 0.1f0
+#DISCOMFORT_WEIGHT_EV = 0.01f0
+#DISC_POT = 2f0
+
+#penalty_weight = 0.1f0
 
 
 #DISCOMFORT_WEIGHT_EV = 1f0
@@ -87,11 +92,11 @@ end
 pv = PV(1f0); # PV(0.95f0); # 
 
 # Battery(eta, soc_min, soc_max, rate_max, loss)
-b = Battery(0.95f0, 0f0, capacities[1][2], capacities[1][3], 0.00003f0); # Battery(0.98f0, 0f0, 10f0, 4.6f0, 0.00003f0);
+b = Battery(0.95f0, 0f0, capacities[charger_id][2], capacities[charger_id][3], 0.00003f0); # Battery(0.98f0, 0f0, 10f0, 4.6f0, 0.00003f0);
 # ElectricVehicle(soc_min, soc_max, rate_max)
-ev = ElectricVehicle(0f0, capacities[1][1], 11f0);
+ev = ElectricVehicle(0f0, capacities[charger_id][1], 11f0);
 # Market(price, discomfort_weight)
-m = Market(0.3f0, DISCOMFORT_WEIGHT_EV, DISC_POT) #10f0)		# Adjust here the penalty for not charging the full amount
+m = Market(0.2f0, DISCOMFORT_WEIGHT_EV, DISC_POT) #10f0)		# Adjust here the penalty for not charging the full amount
 
 mutable struct ShemsState{T<:AbstractFloat} <: AbstractVector{T}
   Soc_b::T
@@ -462,10 +467,10 @@ function step!(env::Shems, s, a; track=0)
 	profit = (m.sell_discount * p_buy * (PV_GR + B_GR)) - (p_buy * (GR_DE + GR_B + GR_EV + EX_EV))
 
 	if track < 0
-		env.reward =  profit - (discomfort * m.discomfort_weight_ev) ^ (m.disc_pot) #+ b_degr + abort
+		env.reward =  profit - m.discomfort_weight_ev * (discomfort ^ m.disc_pot) #+ b_degr + abort
 		penalty = 0
 	else
-		env.reward =  profit - (discomfort * m.discomfort_weight_ev) ^ (m.disc_pot) - penalty #+ b_degr + abort
+		env.reward =  profit - m.discomfort_weight_ev * (discomfort ^ m.disc_pot) - penalty #+ b_degr + abort
 	end
 
 	#results = hcat(Soc_b, Soc_ev, env.reward, comfort, b_degr+abort, PV_DE, B_DE, GR_DE,

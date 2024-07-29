@@ -38,13 +38,13 @@ check_system_memory() {
     fi
 }
 
-JOB_ID=10230100
+JOB_ID=10990400
 
 
-while ((JOB_ID <= 10230100))
+while ((JOB_ID <= 10990400))
 do
     export JOB_ID
-    cp input2.jl out/input/$JOB_ID--input.jl
+    cp input.jl out/input/$JOB_ID--input.jl
     
     # Check GPU memory and system memory
     check_system_memory
