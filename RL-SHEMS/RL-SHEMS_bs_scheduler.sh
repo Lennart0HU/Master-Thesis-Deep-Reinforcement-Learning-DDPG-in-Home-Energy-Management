@@ -14,7 +14,7 @@ check_gpu_memory() {
     
     # Check if both GPUs have less than the minimum required memory
     if [ "$available_memory_0" -lt "$MIN_MEMORY" ] && [ "$available_memory_1" -lt "$MIN_MEMORY" ]; then
-        echo "Both GPUs have less than $MIN_MEMORY memory available. Waiting for 10 minutes..."
+        echo "Both GPUs have less than $MIN_MEMORY memory available. Waiting for 5 minutes..."
         sleep 300
         check_gpu_memory
     fi
@@ -38,29 +38,29 @@ check_system_memory() {
     fi
 }
 
-JOB_ID=10990400
+JOB_ID=10800100
 
 
-while ((JOB_ID <= 10990400))
+while ((JOB_ID <= 10800900))
 do
     export JOB_ID
-    cp input.jl out/input/$JOB_ID--input.jl
+    cp input_RB_on_train.jl out/input/$JOB_ID--input.jl
     
     # Check GPU memory and system memory
-    check_system_memory
-    check_gpu_memory
+    #check_system_memory
+    #check_gpu_memory
 
-    for (( TASK_ID=1; TASK_ID<=2; TASK_ID++ ))  # REMEMBER change back in script eval/test 1:NUM_SEED
+    for (( TASK_ID=1; TASK_ID<=1; TASK_ID++ ))  # REMEMBER change back in script eval/test 1:NUM_SEED
     do
         #Check GPU memory and system memory
-        #check_gpu_memory
-        #check_system_memory
+        check_gpu_memory
+        check_system_memory
         echo "Available memories: GPU0: $available_memory_0, GPU1: $available_memory_1, System: $available_sys_memory KB"
         TASK_ID=$TASK_ID GPU_ID=$GPU_ID julia DDPG_reinforce_charger_v1.jl &
-        #sleep 40
+        
     done
     
-    #wait
+    wait
     #sleep 600
     JOB_ID=$((JOB_ID + 100))
     end_time=$SECONDS
@@ -68,6 +68,22 @@ do
     echo "TIME ELAPSED: $elapsed_minutes minutes"
 done
  
+JOB_ID=10809800
+
+export JOB_ID
+cp input_RB_on_train.jl out/input/$JOB_ID--input.jl
+
+for (( TASK_ID=1; TASK_ID<=1; TASK_ID++ ))  # REMEMBER change back in script eval/test 1:NUM_SEED
+do
+    #Check GPU memory and system memory
+    check_gpu_memory
+    check_system_memory
+    echo "Available memories: GPU0: $available_memory_0, GPU1: $available_memory_1, System: $available_sys_memory KB"
+    TASK_ID=$TASK_ID GPU_ID=$GPU_ID julia DDPG_reinforce_charger_v1.jl &
+        
+done
+
+
 wait
 
 end_time=$SECONDS

@@ -144,7 +144,7 @@ memory = CircularBuffer{Any}(MEM_SIZE)
 if track < 0
   case = "$(Charger_ID)_rule_based_$(track)"
 else
-  case = "$(Charger_ID)_disw$(DISCOMFORT_WEIGHT_EV)_pen$(penalty)_BATCH$(BATCH_SIZE)_MEM$(MEM_SIZE)_$(noise_type)-noise_om$(σ)_th$(θ)_Y$(γ)_tao$(τ)_nact$(η_act)_ncrit$(η_crit)_smart-trainEP"
+  case = "$(Charger_ID)_disw$(DISCOMFORT_WEIGHT_EV)_pen$(penalty)_BATCH$(BATCH_SIZE)_MEM$(MEM_SIZE)_$(noise_type)-noise_om$(σ)_th$(θ)_Y$(γ)_tau$(τ)_nact$(η_act)_ncrit$(η_crit)_smart-trainEP"
 end
 
 #--------------------------------- Game environment ---------------------------

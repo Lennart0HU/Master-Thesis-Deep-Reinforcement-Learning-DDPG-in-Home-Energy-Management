@@ -12,9 +12,11 @@ using Random
 using DataFrames, CSV
 
 #-------------- EXTERNAL VARIABLES--------
+
+
 Job_ID = ENV["JOB_ID"]
 
-
+#=
 if parse(Int, Job_ID[end-1:end]) == 1f0
 	DISCOMFORT_WEIGHT_EV = 0.04f0
 	DISC_POT = 2f0
@@ -28,20 +30,17 @@ end
 
 if parse(Int, Job_ID[end-1:end]) == 15
 	penalty_weight = 1f0
+elseif parse(Int, Job_ID[end-1:end]) == 16
+	penalty_weight = 0f0
 else
 	penalty_weight = 0.1f0
 end
+=#
 
-#DISCOMFORT_WEIGHT_EV = 0.01f0
-#DISC_POT = 2f0
+DISCOMFORT_WEIGHT_EV = 0.01f0
+DISC_POT = 2f0
 
-#penalty_weight = 0.1f0
-
-
-#DISCOMFORT_WEIGHT_EV = 1f0
-#penalty_weight =1f0
-
-#1 + (parse(Int, Job_ID) % 10) # last digid from the Job_ID
+penalty_weight = 0.1f0
 
 charger_id = ((parse(Int, Job_ID) ÷ 100) % 100) # third and fourth last digid form JOB_ID
 

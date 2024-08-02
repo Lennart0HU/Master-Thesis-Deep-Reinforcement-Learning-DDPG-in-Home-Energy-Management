@@ -98,7 +98,8 @@ function set_hyperparameters(job_id)
       12 => ((5f-5, 5f-4), :η_act_η_crit),
       13 => (0.2f0, :noise_act), #theta
       14 => ("ou", :noise_type), #theta
-      15 => (1, :penalty)
+      15 => (1, :penalty),
+      16 => (0, :penalty)
       )
 
   # Set the hyperparameter based on the last two digits
