@@ -46,7 +46,7 @@ plot_all = 1 #0 1
 render = 0 #0 1
 track = 1 #-0.7  # 0 - off, 1 - DRL, , rule-based percentage of start Soc e.g. 70% -> -0.7 (has to be negative)
 run = "eval" # "test", "eval"
-WAIT_SEC = 180 # 60 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10))
+WAIT_SEC = 120 # 60 * (1 + (parse(Int, Job_ID) % 10) * (parse(Int, Job_ID) % 10))
 num_seeds = 10  # always make sure this matches the highest Task_ID in the bash scheduler!
 
 # Function to parse the last two digits of the JOB_ID and set hyperparameters
@@ -149,7 +149,7 @@ memory = CircularBuffer{Any}(MEM_SIZE)
 if track < 0
   case = "$(Charger_ID)_rule_based_$(track)"
 else
-  case = "$(Charger_ID)_disw$(DISCOMFORT_WEIGHT_EV)_pen$(penalty)_BATCH$(BATCH_SIZE)_MEM$(MEM_SIZE)_$(noise_type)-noise_om$(σ)_th$(θ)_Y$(γ)_tau$(τ)_nact$(η_act)_ncrit$(η_crit)_smart-trainEP"
+  case = "$(Charger_ID)_dw$(DISCOMFORT_WEIGHT_EV)_p$(penalty)_B$(BATCH_SIZE)_M$(MEM_SIZE)_$(noise_type)-o$(σ)_th$(θ)_Y$(γ)_tau$(τ)_lract$(η_act)_lrcrit$(η_crit)_nact$(noise_act)_ntrg$(noise_trg)"
 end
 
 #--------------------------------- Game environment ---------------------------

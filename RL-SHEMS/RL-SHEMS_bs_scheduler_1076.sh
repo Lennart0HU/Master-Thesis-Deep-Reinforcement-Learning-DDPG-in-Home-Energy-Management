@@ -14,8 +14,8 @@ check_gpu_memory() {
     
     # Check if both GPUs have less than the minimum required memory
     if [ "$available_memory_0" -lt "$MIN_MEMORY" ] && [ "$available_memory_1" -lt "$MIN_MEMORY" ]; then
-        echo "Both GPUs have less than $MIN_MEMORY memory available. Waiting for 5 minutes..."
-        sleep 300
+        echo "Both GPUs have less than $MIN_MEMORY memory available. Waiting for 2 minutes..."
+        sleep 120
         check_gpu_memory
     fi
     
@@ -33,8 +33,8 @@ check_system_memory() {
     total_available_sys_memory=($(awk '/MemAvailable/ {print $2}' /proc/meminfo) - $(awk '/Buffers/ {print $2}' /proc/meminfo) - $(awk '/Cached/ {print $2}' /proc/meminfo))
     
     if [ "$total_available_sys_memory" -lt "$MIN_SYS_MEMORY" ]; then
-        echo "System memory ($total_available_sys_memory) is below $MIN_SYS_MEMORY KB. Waiting for 5 minutes..."
-        sleep 300
+        echo "System memory ($total_available_sys_memory) is below $MIN_SYS_MEMORY KB. Waiting for 2 minutes..."
+        sleep 120
         check_system_memory
     fi
 }
@@ -66,7 +66,7 @@ do
         sleep 15
     done
     
-    sleep 180
+    sleep 240
 
     JOB_ID=$((JOB_ID + 1))
     end_time=$SECONDS
