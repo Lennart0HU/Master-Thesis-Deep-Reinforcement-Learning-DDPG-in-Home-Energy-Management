@@ -33,7 +33,8 @@ def set_SHEMS_parameters(h_start, h_end, h_predict, h_control, rolling_flag, cas
     # SHEMS(costfactor, p_buy, p_sell, soc_b, soc_ev,  h_start)
     sh = main.SHEMS(costfactor, 0.4, 0.2*0.4, 0.5 * (b.soc_min + b.soc_max), 1,
                 h_start)
-    print("initialized battery soc_b: ", sh.SOC_b)
+    print(f'ChargerID: ', chargerID)
+    print('initialized battery soc_b: ', sh.SOC_b)
 
     return sh, ev, b, m
 
@@ -106,11 +107,17 @@ def yearly_SHEMS(h_start=0, objective=1, case=1, costfactor=10.0, outputflag=1,
     return results
 
 
+#yearly_SHEMS(0, 1, 5, 10.0, 1, season="all", run="test", price="fix", chargerID='Charger04')
+
+
 chargerIDs = ['Charger01', 'Charger02', 'Charger03', 'Charger04', 'Charger05', 'Charger06', 'Charger07', 'Charger08', 'Charger09', 'Charger98']
 
 profits = [('profits', '', 0)]
 
 for chargerID in chargerIDs:
+    results = yearly_SHEMS(0, 1, 5, 10.0, 1, season="all", run="train", price="fix", chargerID=chargerID)
+    profits.append((chargerID, 'train', results[0][3]))
+
     results = yearly_SHEMS(0, 1, 5, 10.0, 1, season="all", run="eval", price="fix", chargerID=chargerID)
     profits.append((chargerID, 'eval', results[0][3]))
 
@@ -122,6 +129,8 @@ df_profits = pd.DataFrame(profits, columns=['ChargerID', 'Run', 'Result'])
 df_profits.to_excel(
         "single_building/results/profits.xlsx",
         index=False)
+
+
 #=
 # # Calling model runs:
 # yearly_SHEMS(1, 1, 5, 1.0, 1, season="all", run="eval", price="fix")

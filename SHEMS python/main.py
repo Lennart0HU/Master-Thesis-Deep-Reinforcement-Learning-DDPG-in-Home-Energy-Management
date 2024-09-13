@@ -66,6 +66,7 @@ H_LENGTH = {
     ("both", "eval"): 720,   
     ("both", "test"): 1488,
     ("all", "eval"): 1439,   
-    ("all", "test"): 2999
+    ("all", "test"): 2999,
+    ("all", "train"): 4319
 }
 

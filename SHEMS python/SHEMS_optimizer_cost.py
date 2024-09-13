@@ -33,7 +33,14 @@ def SHEMS_optimizer(sh, ev, b, m):
     for var in [SOC_b[0], SOC_ev[0]]:
         var.varValue = sh.SOC_b if var == SOC_b[0] else (sh.SOC_ev * ev.soc_max)
     print("Fixed starting soc_b: ", SOC_b[0].varValue)
+
+    if c_ev[0] > -1:    
+        SOC_ev[0].varValue = soc_ev[0]    # If starting during a transaction soc = data soc (x%)
     
+    print("SOC EV START: ", SOC_ev[0].varValue)
+    print("C EV start: ", c_ev[0])
+    print("soc ev start: ", soc_ev[0])
+
     # Objective function
     model += sum((sh.p_sell * X[(h,4)]) - sum(sh.p_buy * X[(h,i)] for i in [2, 6]) - sum(sh.costfactor * sh.p_buy * X[(h,8)])
               for h in range(0, m.h_predict)), "Objective"
@@ -56,6 +63,8 @@ def SHEMS_optimizer(sh, ev, b, m):
 
     # EV
     for h in range(0, m.h_predict):
+
+        model += SOC_ev[0] == soc_ev[0]
 
         if c_ev[h] > 0:
             model += SOC_ev[h + 1] == (SOC_ev[h] + sum(X[(h,i)] for i in range(5, 8))), f"EV_SOC_{h}"       # during transaction: next soc = current soc + charge
