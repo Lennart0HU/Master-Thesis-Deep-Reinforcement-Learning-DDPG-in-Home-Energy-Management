@@ -54,7 +54,8 @@ capacities = Dict{Int, Tuple{Float32, Float32, Float64}}(
     7 => (36.521f0, 12f0 * 0.9f0, 3.3),
     8 => (45.728f0, 10f0 * 0.9f0, 3.3),
     9 => (21.935f0, 7.5f0 * 0.9f0, 3.3),
-    98 => (35.816f0, 7.5f0 * 0.9f0, 3.3)
+    98 => (35.816f0, 7.5f0 * 0.9f0, 3.3),
+	97 => (78.993f0, 11f0 * 0.9f0, 4.6)
 )
 
 
@@ -225,10 +226,9 @@ function reset_state!(env::Shems; rng=0)
 
 		c_ev_end = df[(idx + env.maxsteps), :h_countdown]
 		counter = 0
-		max_iterations = 100  # Set your limit here
+		max_iterations = 100 
 
 		while c_ev_end > -1 && idx < (nrow(df) - env.maxsteps)
-			#println("reset_state problem. idx: $(idx), maxsteps: $(env.maxsteps), c_ev at $(idx+env.maxsteps) : $c_ev_end.")
 			idx += Int(c_ev_end + 1)
 
 			# If idx out of bound, draw new idx.
@@ -236,13 +236,11 @@ function reset_state!(env::Shems; rng=0)
 				idx = rand(MersenneTwister(rng), 1:(nrow(df) - env.maxsteps))
 			end
 
-			#println("new index: $idx")
 			c_ev_end = df[(idx + env.maxsteps), :h_countdown]
-			#println("new idx: $idx, new c_ev_end = $c_ev_end.")
 			
 			counter += 1
 			if counter > max_iterations
-				println("Loop has exceeded maximum iterations, while trying to extend Training Episode in reset_state. Breaking...")
+				println("Loop for Trainign Episode selection has exceeded maximum iterations, while trying to extend Training Episode in reset_state. Breaking...")
 				break
 			end
 		end
