@@ -12,6 +12,8 @@ def SHEMS_optimizer(sh, ev, b, m):
     
     # Input data
     df = pd.read_csv(f"single_building/data/{m.chargerID}_{m.season}_{m.run}_{m.price}.csv")
+    print('NaNs:', df['chargekwh'].isnull().sum())
+
     h_last = sh.h_start + m.h_predict   # optimization horizon
 
     # read input data

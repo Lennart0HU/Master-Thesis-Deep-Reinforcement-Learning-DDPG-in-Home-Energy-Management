@@ -130,11 +130,3 @@ df_profits.to_excel(
         "single_building/results/profits.xlsx",
         index=False)
 
-
-#=
-# # Calling model runs:
-# yearly_SHEMS(1, 1, 5, 1.0, 1, season="all", run="eval", price="fix")
-# yearly_SHEMS(1, 1, 5, 1.0, 1, run="test")
-# yearly_SHEMS(1, 1, 5, 1.0, 1, season="summer", run="eval", price="fix")
-# yearly_SHEMS(1, 1, 5, 1.0, 1, season="winter", run="eval", price="fix")
-# =#
