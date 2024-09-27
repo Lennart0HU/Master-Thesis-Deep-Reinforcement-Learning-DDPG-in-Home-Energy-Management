@@ -1,4 +1,4 @@
-# Efficient Energy Management for Prosumer Households
+# Master-Thesis-Deep-Reinforcement-Learning-DDPG-in-Home-Energy-Management
 
 ## Abstract
 Efficient energy management on the level of prosumer households is key to alleviating grid stress in an energy transition marked by electrification, a switch to renewable generation, and decentralization. With millions of new private EV charging stations estimated to be installed by 2030, smart EV charging is one strategy to balance production and consumption locally, as well as regionally. Model-free deep reinforcement learning has emerged as a promising method to deal with the dynamic and uncertain environment of home energy management optimization problems. In this thesis, a deep deterministic policy gradient algorithm is applied to a new real-life dataset of prosumer households with PV, battery, and EV chargers and benchmarked against a rule-based power charging mode commonly used in the markets today, as well as the optimal solution under perfect information with model predictive control.
