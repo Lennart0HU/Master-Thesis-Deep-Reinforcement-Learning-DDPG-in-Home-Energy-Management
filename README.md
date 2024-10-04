@@ -9,7 +9,7 @@ Python was used for the descriptive analysis and most of the pre-processing of t
 The code for the Model Predictive Control Benchmark is written in python and the approach is based on https://github.com/lilanger/SHEMS.git. 
 
 ## Data Availability
-Please note that the company data used in this thesis is not available in this repository.
+Please note that the company data used in this thesis is not publically available.
 
 ## Requirements
 - Julia is used in version 1.6.1.
@@ -18,7 +18,7 @@ Please note that the company data used in this thesis is not available in this r
 - Nvidida GPU (for CUDA usage)
 
 ## Repository Structure
-Having been based on the repository by Langer (2022), this repositroy contains remnants of the original model that was built for the HVAC context that do not work in their current from. These remained, mostly in achrive folders, or quoted-out directly in the code, for the purpose of recycling in future applciations and adaptations. Among these are also different alogrithms, HVAC-datasets, the function to run the model in distinct seasons, the option to run the code on a SGE cluster, different environments
+Having been based on the repository by Langer (2022), this repositroy contains remnants of the original model that was built for the HVAC context that do not work in their current from. These remained, mostly in achrive folders, or quoted-out directly in the code, for the purpose of recycling in future applciations and adaptations. Among these are also different alogrithms, HVAC-datasets, the function to run the model in distinct seasons, the option to run the code on a SGE cluster and different RL environments.
 
 SHEMS-python includes the python implementation of the MPC benchmark.
 
@@ -33,8 +33,6 @@ The folder Reinforce.jl... contains the RL environments and the file to embed th
 The environment used in the thesis was shems_LU1.jl.
 Changes to the discomfort score, penalty weight, as well as EV capacities have to be entered here.
 
-The data folder contains the input data of the RL environment for each ChargerID and splits for train, eval and test.
-
 Visualization contains figures of the descriptive analysis and of the results, produced with jupiter notebooks.
 
 The out folder contains the results of the model runs.
@@ -45,7 +43,7 @@ out/input contains copies of the input files used in each run.
 out/bson contains the .bson (binary json) files with the trained agent's network weights.
 
 The bash_schedulers folder contains a number of bash schedulers that were used for all the thesis runs, where the JOB_IDs 1070xxxx/1071xxxx are for the rule-based benchmark, 72/73 for default DRL, 74/75 for parameter search, 76/77 grid search, 78/79 the tuned model and 80 for rule-based on training data.
-The moste recent bash scheduler scripts (starting on 11...) are contianed in the main folder.
+The moste recent bash scheduler scripts (starting on 11...) are contained in the main folder.
 
 The jupiter notebooks Data_preparation, Data_pre-processing and Data_descriptive_analysis were used to pre-process, filter and analysie the data (where the julia code in Data_preparation is adapted from the original code to bring the data into the right format for the DRL model).
 
